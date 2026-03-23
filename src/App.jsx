@@ -10,6 +10,7 @@ import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import TeamsPage from './pages/TeamsPage';
 import TeamDetailPage from './pages/TeamDetailPage';
+import TeamSessionDetailPage from './pages/TeamSessionDetailPage';
 import SessionHistoryPage from './pages/SessionHistoryPage';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="teams" element={<TeamsPage />} />
           <Route path="teams/:teamId" element={<TeamDetailPage />} />
+          <Route path="teams/:teamId/sessions/:teamSessionId" element={<TeamSessionDetailPage />} />
           <Route path="sessions" element={<SessionHistoryPage />} />
         </Route>
       </Route>

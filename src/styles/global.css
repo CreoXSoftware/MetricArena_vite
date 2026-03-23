@@ -1601,6 +1601,13 @@ body {
   margin-top: 2px;
 }
 
+.upload-details-row {
+  display: flex;
+  gap: 14px;
+}
+
+.upload-details-row .upload-details-label { flex: 1; }
+
 .upload-details-card {
   width: 100%;
   background: var(--surface);
@@ -1920,6 +1927,168 @@ body {
   padding: 12px 16px;
 }
 
+.team-session-card-clickable {
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+.team-session-card-clickable:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+/* ── Team Session Detail Page ── */
+.ts-detail-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ts-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ts-detail-section {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+}
+
+/* Comparison table */
+.ts-comparison-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.ts-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ts-comparison-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.ts-comparison-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.ts-player-row {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.ts-player-row:hover { background: var(--surface2); }
+.ts-player-row-own { background: rgba(0, 229, 160, 0.04); }
+.ts-player-row-own:hover { background: rgba(0, 229, 160, 0.08); }
+.ts-player-row-expanded { background: rgba(0, 229, 160, 0.1) !important; }
+
+.ts-col-player { min-width: 160px; }
+
+.ts-player-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ts-player-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.ts-player-avatar-placeholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.ts-player-name { font-weight: 500; }
+
+.ts-you-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(0, 229, 160, 0.12);
+  border: 1px solid rgba(0, 229, 160, 0.3);
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.ts-metric-cell {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.ts-source-cell { color: var(--text-dim); }
+
+.ts-source-badge {
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 2px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.ts-source-split {
+  color: var(--accent);
+  background: rgba(0, 229, 160, 0.1);
+  border: 1px solid rgba(0, 229, 160, 0.25);
+}
+.ts-source-full {
+  color: var(--text-dim);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+}
+
+/* Expanded metrics panel */
+.ts-expanded-panel {
+  border-color: var(--accent);
+  background: rgba(0, 229, 160, 0.03);
+}
+
+.ts-expanded-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.ts-expanded-title {
+  font-size: 15px;
+  font-weight: 700;
+  flex: 1;
+}
+
 .team-session-card-top {
   display: flex;
   flex-direction: column;
@@ -2010,6 +2179,14 @@ body {
   flex-direction: column;
   gap: 12px;
 }
+.session-card-clickable {
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.session-card-clickable:hover {
+  border-color: var(--accent);
+  background: var(--surface2);
+}
 
 .session-card-header {
   display: flex;
@@ -2029,6 +2206,12 @@ body {
   margin-top: 2px;
 }
 
+.session-card-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 .session-card-sport {
   font-size: 11px;
   text-transform: uppercase;
@@ -2038,6 +2221,17 @@ body {
   padding: 3px 10px;
   border-radius: 8px;
   font-weight: 500;
+}
+
+.session-card-type {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 8px;
+  color: var(--accent2);
+  background: rgba(0,184,255,0.1);
 }
 
 .session-card-metrics {

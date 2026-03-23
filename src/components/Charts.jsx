@@ -122,9 +122,9 @@ export function SpeedChart({ data, chartView, thresholds, onZoom }) {
     if (inSp) ctx.fillRect(spStartX, pad.top, tToX(visible[visible.length - 1].t) - spStartX, cH);
     ctx.restore();
 
-    // Y-axis
+    // Y-axis (m/s)
     ctx.fillStyle = '#8888a0'; ctx.font = '11px JetBrains Mono, monospace'; ctx.textAlign = 'right';
-    for (let i = 0; i <= 5; i++) ctx.fillText((maxS / 5 * (5 - i)).toFixed(0), pad.left - 8, pad.top + (cH / 5) * i + 4);
+    for (let i = 0; i <= 5; i++) ctx.fillText(((maxS / 5 * (5 - i)) / 3.6).toFixed(1), pad.left - 8, pad.top + (cH / 5) * i + 4);
     // X-axis
     ctx.textAlign = 'center';
     for (let i = 0; i <= 4; i++) {
@@ -189,7 +189,7 @@ export function SpeedChart({ data, chartView, thresholds, onZoom }) {
       ctx.beginPath(); ctx.moveTo(px, si.pad.top); ctx.lineTo(px, si.pad.top + si.cH); ctx.stroke();
       ctx.setLineDash([]);
       ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fillStyle = '#00b8ff'; ctx.fill();
-      const lines = [pt.speed.toFixed(1) + ' km/h', formatDuration(pt.t)];
+      const lines = [(pt.speed / 3.6).toFixed(2) + ' m/s', formatDuration(pt.t)];
       const colors = ['#00b8ff', '#8888a0'];
       let bx = px + 10, by = py - 10;
       ctx.font = '11px JetBrains Mono, monospace';
@@ -221,8 +221,77 @@ export function SpeedChart({ data, chartView, thresholds, onZoom }) {
   );
 }
 
+// ========== SPLIT OVERLAY HELPERS ==========
+const SPLIT_COLORS = ['#00e5a0', '#00b8ff', '#f59e0b', '#f43f5e', '#a78bfa'];
+const EDGE_HIT_PX = 10;
+
+/** Returns the list of base-split objects whose ranges should be highlighted for a given selected split. */
+function getEdgeSplits(allSplits, selectedSplitId) {
+  const sel = allSplits.find(s => s.id === selectedSplitId);
+  if (!sel) return [];
+  if (sel.isCombined) return allSplits.filter(s => (sel.sourceIds || []).includes(s.id));
+  return [sel];
+}
+
+/** Draw the range highlight + edge handles for the currently selected split (or its children). */
+function drawSplitOverlays(ctx, ai, allSplits, selectedSplitId, previewEdge) {
+  const edgeSplits = getEdgeSplits(allSplits, selectedSplitId);
+  if (!edgeSplits.length) return;
+
+  const tToX = t => ai.pad.left + ((t - ai.tStart) / (ai.tEnd - ai.tStart)) * ai.cW;
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(ai.pad.left, ai.pad.top, ai.cW, ai.cH); ctx.clip();
+
+  edgeSplits.forEach((s, i) => {
+    const color = SPLIT_COLORS[i % SPLIT_COLORS.length];
+    const ts = previewEdge?.splitId === s.id && previewEdge.edge === 'start' ? previewEdge.time : s.tStart;
+    const te = previewEdge?.splitId === s.id && previewEdge.edge === 'end'   ? previewEdge.time : s.tEnd;
+    const x1 = tToX(ts);
+    const x2 = tToX(te);
+
+    // Range fill
+    ctx.fillStyle = color + '28';
+    ctx.fillRect(Math.max(x1, ai.pad.left), ai.pad.top,
+      Math.min(x2, ai.pad.left + ai.cW) - Math.max(x1, ai.pad.left), ai.cH);
+
+    // Edge lines + handle circles (only if visible in current view)
+    [[x1, ts], [x2, te]].forEach(([px]) => {
+      if (px < ai.pad.left - 1 || px > ai.pad.left + ai.cW + 1) return;
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(px, ai.pad.top); ctx.lineTo(px, ai.pad.top + ai.cH); ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(px, ai.pad.top + 10, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px, ai.pad.top + ai.cH - 10, 5, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // Label (only when showing multiple children)
+    if (edgeSplits.length > 1) {
+      const lx = Math.max(ai.pad.left + 4, Math.min(ai.pad.left + ai.cW - 4, (Math.max(x1, ai.pad.left) + Math.min(x2, ai.pad.left + ai.cW)) / 2));
+      ctx.fillStyle = color;
+      ctx.font = 'bold 10px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(s.name, lx, ai.pad.top + 26);
+    }
+  });
+
+  ctx.restore();
+}
+
+/** Return the split edge (if any) within EDGE_HIT_PX of the cursor. */
+function findHoveredEdge(clientX, canvasRect, ai, allSplits, selectedSplitId) {
+  if (!ai || !selectedSplitId) return null;
+  const x = clientX - canvasRect.left;
+  const tToX = t => ai.pad.left + ((t - ai.tStart) / (ai.tEnd - ai.tStart)) * ai.cW;
+  for (const s of getEdgeSplits(allSplits, selectedSplitId)) {
+    if (Math.abs(x - tToX(s.tStart)) <= EDGE_HIT_PX) return { splitId: s.id, edge: 'start' };
+    if (Math.abs(x - tToX(s.tEnd))   <= EDGE_HIT_PX) return { splitId: s.id, edge: 'end' };
+  }
+  return null;
+}
+
 // ========== ACCEL CHART ==========
-export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, splits, selectedSplitId }) {
+export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, splits, selectedSplitId, onSplitResize }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const infoRef = useRef(null);
@@ -230,6 +299,11 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
   const baseImageRef = useRef(null);
   const overlayRef = useRef(null);
   const selRef = useRef({ start: null, end: null, dragging: false });
+  // Keep fresh refs so event handlers don't need to re-register when splits change
+  const splitsRef = useRef(splits);
+  const selectedSplitIdRef = useRef(selectedSplitId);
+  useEffect(() => { splitsRef.current = splits; }, [splits]);
+  useEffect(() => { selectedSplitIdRef.current = selectedSplitId; }, [selectedSplitId]);
 
   const render = useCallback(() => {
     const canvas = canvasRef.current;
@@ -314,7 +388,9 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
     }
 
     baseImageRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    // TODO: draw split overlays here if selectedSplitId
+    if (selectedSplitId && splits?.length) {
+      drawSplitOverlays(ctx, infoRef.current, splits, selectedSplitId, null);
+    }
     imageRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
   }, [data, chartView, thresholds, splits, selectedSplitId]);
 
@@ -348,19 +424,22 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
     };
   }, [onZoom]);
 
-  // Selection drag + hover
+  // Interaction: edge-drag, selection-drag, hover
   useEffect(() => {
     const canvas = canvasRef.current;
     const overlay = overlayRef.current;
     if (!canvas || !overlay) return;
+
+    // Local drag state (no re-renders during drag)
+    const edgeDrag = { active: false, splitId: null, edge: null };
 
     const xToTime = (clientX) => {
       const ai = infoRef.current;
       if (!ai) return 0;
       const rect = canvas.getBoundingClientRect();
       const x = clientX - rect.left;
-      const t = ai.tStart + ((x - ai.pad.left) / ai.cW) * (ai.tEnd - ai.tStart);
-      return Math.max(ai.tStart, Math.min(ai.tEnd, t));
+      return Math.max(ai.tStart, Math.min(ai.tEnd,
+        ai.tStart + ((x - ai.pad.left) / ai.cW) * (ai.tEnd - ai.tStart)));
     };
     const timeToX = (t) => {
       const ai = infoRef.current;
@@ -368,7 +447,18 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
       return ai.pad.left + ((t - ai.tStart) / (ai.tEnd - ai.tStart)) * ai.cW;
     };
 
+    // ── mousedown: decide edge-drag vs selection-drag ──
     const handleDown = (e) => {
+      const ai = infoRef.current;
+      if (!ai) return;
+      const rect = canvas.getBoundingClientRect();
+      const hit = findHoveredEdge(e.clientX, rect, ai, splitsRef.current, selectedSplitIdRef.current);
+      if (hit) {
+        edgeDrag.active = true;
+        edgeDrag.splitId = hit.splitId;
+        edgeDrag.edge = hit.edge;
+        return; // do not start selection drag
+      }
       selRef.current.dragging = true;
       selRef.current.start = xToTime(e.clientX);
       selRef.current.end = selRef.current.start;
@@ -376,78 +466,109 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
       overlay.style.width = '0px';
     };
 
-    const handleMove = (e) => {
+    // ── document mousemove: drives both drag types ──
+    const handleDocMove = (e) => {
+      const ai = infoRef.current;
+      if (!ai) return;
+      if (edgeDrag.active) {
+        // Redraw base + overlays with preview edge position
+        const t = xToTime(e.clientX);
+        const ctx = canvas.getContext('2d');
+        if (baseImageRef.current) ctx.putImageData(baseImageRef.current, 0, 0);
+        drawSplitOverlays(ctx, ai, splitsRef.current, selectedSplitIdRef.current,
+          { splitId: edgeDrag.splitId, edge: edgeDrag.edge, time: t });
+        return;
+      }
       if (selRef.current.dragging) {
         selRef.current.end = xToTime(e.clientX);
         const s = selRef.current;
         overlay.style.left = Math.min(timeToX(s.start), timeToX(s.end)) + 'px';
         overlay.style.width = Math.abs(timeToX(s.end) - timeToX(s.start)) + 'px';
-      } else {
-        // Hover tooltip
-        if (!imageRef.current || !infoRef.current) return;
-        const ai = infoRef.current;
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const ctx = canvas.getContext('2d');
-        ctx.putImageData(imageRef.current, 0, 0);
-        if (x < ai.pad.left || x > ai.pad.left + ai.cW) return;
-        const t = ai.tStart + ((x - ai.pad.left) / ai.cW) * (ai.tEnd - ai.tStart);
-        const pt = findClosestInView(data, { tStart: ai.tStart, tEnd: ai.tEnd }, t);
-        if (!pt) return;
-        const px = ai.pad.left + ((pt.t - ai.tStart) / (ai.tEnd - ai.tStart)) * ai.cW;
-        const pyA = ai.pad.top + ai.cH - (Math.min(pt.linMag, ai.maxA) / ai.maxA) * ai.cH;
-        const pyS = ai.pad.top + ai.cH - (pt.speed / ai.maxS) * ai.cH;
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
-        ctx.beginPath(); ctx.moveTo(px, ai.pad.top); ctx.lineTo(px, ai.pad.top + ai.cH); ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.beginPath(); ctx.arc(px, pyA, 4, 0, Math.PI * 2); ctx.fillStyle = '#00e5a0'; ctx.fill();
-        ctx.beginPath(); ctx.arc(px, pyS, 4, 0, Math.PI * 2); ctx.fillStyle = '#00b8ff'; ctx.fill();
-        const lines = [pt.linMag.toFixed(1) + ' m/s²', pt.speed.toFixed(1) + ' km/h', formatDuration(pt.t)];
-        const clrs = ['#00e5a0', '#00b8ff', '#8888a0'];
-        ctx.font = '11px JetBrains Mono, monospace';
-        const bW = Math.max(...lines.map(l => ctx.measureText(l).width)) + 16;
-        let bx = px + 10, by = Math.min(pyA, pyS) - 10;
-        if (bx + bW > ai.W - ai.pad.right) bx = px - bW - 10;
-        if (by < ai.pad.top) by = ai.pad.top + 4;
-        ctx.textAlign = 'left';
-        drawHoverTooltip(ctx, lines, clrs, bx, by);
-        ctx.restore();
       }
     };
 
-    const handleUp = (e) => {
+    // ── document mouseup: commit any active drag ──
+    const handleDocUp = (e) => {
+      if (edgeDrag.active) {
+        edgeDrag.active = false;
+        const t = xToTime(e.clientX);
+        onSplitResize?.(edgeDrag.splitId, edgeDrag.edge, t);
+        edgeDrag.splitId = null;
+        edgeDrag.edge = null;
+        return;
+      }
       if (!selRef.current.dragging) return;
       selRef.current.dragging = false;
       selRef.current.end = xToTime(e.clientX);
       const s = selRef.current;
+      overlay.style.display = 'none';
       if (Math.abs(s.end - s.start) > 0.3) {
-        const tMin = Math.min(s.start, s.end);
-        const tMax = Math.max(s.start, s.end);
-        onSelection?.(tMin, tMax);
+        onSelection?.(Math.min(s.start, s.end), Math.max(s.start, s.end));
       } else {
-        overlay.style.display = 'none';
         onSelection?.(null, null);
       }
     };
 
+    // ── canvas mousemove: cursor + hover tooltip (when not dragging) ──
+    const handleMove = (e) => {
+      if (edgeDrag.active || selRef.current.dragging) return;
+      const ai = infoRef.current;
+      if (!ai || !imageRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+
+      // Cursor style based on edge proximity
+      const hit = findHoveredEdge(e.clientX, rect, ai, splitsRef.current, selectedSplitIdRef.current);
+      canvas.style.cursor = hit ? 'ew-resize' : 'crosshair';
+
+      // Hover tooltip
+      const ctx = canvas.getContext('2d');
+      ctx.putImageData(imageRef.current, 0, 0);
+      if (x < ai.pad.left || x > ai.pad.left + ai.cW) return;
+      const t = ai.tStart + ((x - ai.pad.left) / ai.cW) * (ai.tEnd - ai.tStart);
+      const pt = findClosestInView(data, { tStart: ai.tStart, tEnd: ai.tEnd }, t);
+      if (!pt) return;
+      const px = ai.pad.left + ((pt.t - ai.tStart) / (ai.tEnd - ai.tStart)) * ai.cW;
+      const pyA = ai.pad.top + ai.cH - (Math.min(pt.linMag, ai.maxA) / ai.maxA) * ai.cH;
+      const pyS = ai.pad.top + ai.cH - (pt.speed / ai.maxS) * ai.cH;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(px, ai.pad.top); ctx.lineTo(px, ai.pad.top + ai.cH); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(px, pyA, 4, 0, Math.PI * 2); ctx.fillStyle = '#00e5a0'; ctx.fill();
+      ctx.beginPath(); ctx.arc(px, pyS, 4, 0, Math.PI * 2); ctx.fillStyle = '#00b8ff'; ctx.fill();
+      const lines = [pt.linMag.toFixed(1) + ' m/s²', (pt.speed / 3.6).toFixed(2) + ' m/s', formatDuration(pt.t)];
+      const clrs = ['#00e5a0', '#00b8ff', '#8888a0'];
+      ctx.font = '11px JetBrains Mono, monospace';
+      const bW = Math.max(...lines.map(l => ctx.measureText(l).width)) + 16;
+      let bx = px + 10, by = Math.min(pyA, pyS) - 10;
+      if (bx + bW > ai.W - ai.pad.right) bx = px - bW - 10;
+      if (by < ai.pad.top) by = ai.pad.top + 4;
+      ctx.textAlign = 'left';
+      drawHoverTooltip(ctx, lines, clrs, bx, by);
+      ctx.restore();
+    };
+
     const handleLeave = () => {
-      selRef.current.dragging = false;
-      canvas.style.cursor = 'crosshair';
-      if (imageRef.current) canvas.getContext('2d').putImageData(imageRef.current, 0, 0);
+      if (!edgeDrag.active && !selRef.current.dragging) {
+        canvas.style.cursor = 'crosshair';
+        if (imageRef.current) canvas.getContext('2d').putImageData(imageRef.current, 0, 0);
+      }
     };
 
     canvas.addEventListener('mousedown', handleDown);
     canvas.addEventListener('mousemove', handleMove);
-    canvas.addEventListener('mouseup', handleUp);
     canvas.addEventListener('mouseleave', handleLeave);
+    document.addEventListener('mousemove', handleDocMove);
+    document.addEventListener('mouseup', handleDocUp);
     return () => {
       canvas.removeEventListener('mousedown', handleDown);
       canvas.removeEventListener('mousemove', handleMove);
-      canvas.removeEventListener('mouseup', handleUp);
       canvas.removeEventListener('mouseleave', handleLeave);
+      document.removeEventListener('mousemove', handleDocMove);
+      document.removeEventListener('mouseup', handleDocUp);
     };
-  }, [data, onSelection]);
+  }, [data, onSelection, onSplitResize]);
 
   return (
     <div className="section">
@@ -461,7 +582,7 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
       </div>
       <div className="chart-legend">
         <span className="legend-mag">Net Acceleration (m/s²)</span>
-        <span className="legend-speed">Speed (km/h)</span>
+        <span className="legend-speed">Speed (m/s)</span>
       </div>
     </div>
   );

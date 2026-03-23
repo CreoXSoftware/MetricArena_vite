@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { Navigate } from 'react-router-dom';
 import { BrandSmall } from '../components/Brand';
 import MetricsGrid from '../components/MetricsGrid';
 import SpeedZones from '../components/SpeedZones';
@@ -12,18 +12,22 @@ import { computeMetrics, aggregateMetrics } from '../utils/metrics';
 import { exportGPX, exportMetricsJSON, exportMetricsCSV } from '../utils/exporters';
 import { formatDuration } from '../utils/format';
 import { useSession } from '../contexts/SessionContext';
+import { useSessions } from '../hooks/useSessions';
 
 export default function DashboardPage() {
-  const { processedData, profile, thresholds, setThresholds } = useSession();
-  const navigate = useNavigate();
+  const { processedData, profile, thresholds, setThresholds, loadedSplits, currentSessionId } = useSession();
+  const { updateSessionSplits } = useSessions();
 
   const [localThresholds, setLocalThresholds] = useState(thresholds);
   const [chartView, setChartView] = useState(() => ({
     tStart: 0,
     tEnd: processedData ? processedData[processedData.length - 1].t : 0,
   }));
-  const [splits, setSplits] = useState([]);
+  // splits stores { id, name, tStart, tEnd, isCombined, sourceIds, sourceSplits }
+  // metrics are derived via splitsWithCurrentMetrics below
+  const [splits, setSplits] = useState(() => loadedSplits || []);
   const [selectedSplitId, setSelectedSplitId] = useState(null);
+  const splitsInitialized = useRef(false);
   const [selectionRange, setSelectionRange] = useState(null);
   const [splitNameInput, setSplitNameInput] = useState('');
   const [showSplitInput, setShowSplitInput] = useState(false);
@@ -33,9 +37,43 @@ export default function DashboardPage() {
     [processedData, profile, localThresholds]
   );
 
+  /** Re-derives split metrics (and combined tStart/tEnd) whenever thresholds or time ranges change. */
+  const splitsWithCurrentMetrics = useMemo(() => {
+    if (!processedData || splits.length === 0) return splits;
+    const baseMap = {};
+    splits.forEach(s => {
+      if (!s.isCombined) {
+        const slice = processedData.filter(d => d.t >= s.tStart && d.t <= s.tEnd);
+        baseMap[s.id] = { ...s, metrics: computeMetrics(slice, profile, localThresholds) };
+      }
+    });
+    return splits.map(s => {
+      if (s.isCombined) {
+        const sources = (s.sourceIds || []).map(id => baseMap[id]).filter(Boolean);
+        // Keep tStart/tEnd in sync with whatever the source splits currently cover
+        const tStart = sources.length ? Math.min(...sources.map(src => src.tStart)) : s.tStart;
+        const tEnd   = sources.length ? Math.max(...sources.map(src => src.tEnd))   : s.tEnd;
+        return { ...s, tStart, tEnd, metrics: aggregateMetrics(sources.map(src => src.metrics), profile) };
+      }
+      return baseMap[s.id] || s;
+    });
+  }, [splits, processedData, profile, localThresholds]);
+
   const handleThresholdsApply = useCallback(() => {
     setThresholds(localThresholds);
   }, [localThresholds, setThresholds]);
+
+  // Auto-save splits to DB whenever the splits array changes (add/delete/rename/combine).
+  // Skip the initial mount to avoid overwriting DB splits with the loaded state.
+  useEffect(() => {
+    if (!splitsInitialized.current) {
+      splitsInitialized.current = true;
+      return;
+    }
+    if (!currentSessionId) return;
+    updateSessionSplits(currentSessionId, splitsWithCurrentMetrics);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [splits]); // intentionally only `splits` — threshold changes don't trigger a DB write
 
   const handleZoom = useCallback((cursorTime, delta) => {
     if (!processedData) return;
@@ -68,21 +106,18 @@ export default function DashboardPage() {
   }, [splits.length]);
 
   const saveSplit = useCallback(() => {
-    if (!selectionRange || !processedData) return;
+    if (!selectionRange) return;
     const name = splitNameInput.trim() || `Split ${splits.length + 1}`;
-    const splitData = processedData.filter(d => d.t >= selectionRange.tStart && d.t <= selectionRange.tEnd);
-    const splitMetrics = computeMetrics(splitData, profile, localThresholds);
     setSplits(prev => [...prev, {
       id: Date.now(),
       name,
       tStart: selectionRange.tStart,
       tEnd: selectionRange.tEnd,
-      metrics: splitMetrics,
       isCombined: false,
     }]);
     setSelectionRange(null);
     setShowSplitInput(false);
-  }, [selectionRange, splitNameInput, processedData, profile, localThresholds, splits.length]);
+  }, [selectionRange, splitNameInput, splits.length]);
 
   const clearSelection = useCallback(() => {
     setSelectionRange(null);
@@ -106,7 +141,6 @@ export default function DashboardPage() {
     const selected = splits.filter(s => ids.includes(s.id));
     const tMin = Math.min(...selected.map(s => s.tStart));
     const tMax = Math.max(...selected.map(s => s.tEnd));
-    const combinedMetrics = aggregateMetrics(selected.map(s => s.metrics), profile);
     setSplits(prev => [...prev, {
       id: Date.now(),
       name,
@@ -115,9 +149,17 @@ export default function DashboardPage() {
       isCombined: true,
       sourceIds: ids,
       sourceSplits: selected.map(s => s.name),
-      metrics: combinedMetrics,
     }]);
-  }, [splits, profile]);
+  }, [splits]);
+
+  const handleSplitResize = useCallback((splitId, edge, newTime) => {
+    const totalDur = processedData ? processedData[processedData.length - 1].t : Infinity;
+    setSplits(prev => prev.map(s => {
+      if (s.id !== splitId) return s;
+      if (edge === 'start') return { ...s, tStart: Math.max(0, Math.min(newTime, s.tEnd - 0.5)) };
+      return { ...s, tEnd: Math.min(totalDur, Math.max(newTime, s.tStart + 0.5)) };
+    }));
+  }, [processedData]);
 
   if (!processedData) return <Navigate to="/app/upload" replace />;
 
@@ -139,10 +181,9 @@ export default function DashboardPage() {
         <div className="export-bar">
           <ExportMenu
             onExportGPX={() => exportGPX(processedData)}
-            onExportJSON={() => exportMetricsJSON(processedData, profile, localThresholds, splits)}
-            onExportCSV={() => exportMetricsCSV(processedData, profile, localThresholds, splits)}
+            onExportJSON={() => exportMetricsJSON(processedData, profile, localThresholds, splitsWithCurrentMetrics)}
+            onExportCSV={() => exportMetricsCSV(processedData, profile, localThresholds, splitsWithCurrentMetrics)}
           />
-          <button className="btn" onClick={() => navigate('/app/upload')}>Load Session</button>
         </div>
       </div>
 
@@ -172,8 +213,9 @@ export default function DashboardPage() {
         thresholds={localThresholds}
         onZoom={handleZoom}
         onSelection={handleAccelSelection}
-        splits={splits}
+        splits={splitsWithCurrentMetrics}
         selectedSplitId={selectedSplitId}
+        onSplitResize={handleSplitResize}
       />
 
       {showSplitInput && (
@@ -203,8 +245,9 @@ export default function DashboardPage() {
       )}
 
       <SplitsPanel
-        splits={splits}
+        splits={splitsWithCurrentMetrics}
         profile={profile}
+        thresholds={localThresholds}
         onDelete={deleteSplit}
         onRename={renameSplit}
         onSelect={selectSplit}

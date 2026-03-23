@@ -11,15 +11,17 @@ function SplitMetric({ label, value }) {
   );
 }
 
-export default function SplitsPanel({ splits, profile, onDelete, onRename, onSelect, selectedSplitId, onCombine }) {
+export default function SplitsPanel({ splits, profile, thresholds, onDelete, onRename, onSelect, selectedSplitId, onCombine }) {
+  const T = thresholds || {};
   const [combineSelection, setCombineSelection] = useState([]);
   const [combineName, setCombineName] = useState('Full Game');
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
 
-  if (!splits.length) return null;
+  const validSplits = splits.filter(s => s?.metrics);
+  if (!validSplits.length) return null;
 
-  const baseSplits = splits.filter(s => !s.isCombined);
+  const baseSplits = validSplits.filter(s => !s.isCombined);
 
   const handleCombine = () => {
     if (combineSelection.length < 2) { alert('Select at least 2 splits to combine.'); return; }
@@ -51,9 +53,8 @@ export default function SplitsPanel({ splits, profile, onDelete, onRename, onSel
         <span className="dot" style={{ background: 'var(--accent3)' }}></span> Saved Splits
       </div>
       <div className="splits-container">
-        {splits.map(s => {
+        {validSplits.map(s => {
           const m = s.metrics;
-          if (!m) return null;
           const isSelected = selectedSplitId === s.id;
           const cls = `split-card${isSelected ? (s.isCombined ? ' selected-split-combined' : ' selected-split') : ''}`;
           const badge = s.isCombined
@@ -101,19 +102,31 @@ export default function SplitsPanel({ splits, profile, onDelete, onRename, onSel
                 </div>
               )}
               <div className="split-metrics">
-                <SplitMetric label="Max Speed" value={m.maxSpeed.toFixed(1) + ' km/h'} />
-                <SplitMetric label="Avg Speed" value={m.avgSpeed.toFixed(1) + ' km/h'} />
+                <SplitMetric label="Max Speed" value={(m.maxSpeedMs ?? m.maxSpeed / 3.6).toFixed(2) + ' m/s'} />
+                <SplitMetric label="Avg Speed" value={(m.avgSpeed / 3.6).toFixed(2) + ' m/s'} />
                 <SplitMetric label="Max Accel" value={m.maxAccel.toFixed(1) + ' m/s²'} />
+                <SplitMetric label="Avg Accel" value={m.avgAccel.toFixed(2) + ' m/s²'} />
                 <SplitMetric label="Max Decel" value={m.maxDecel.toFixed(1) + ' m/s²'} />
                 <SplitMetric label="Distance" value={m.totalDist.toFixed(0) + ' m'} />
+                <SplitMetric label="High Speed Dist" value={m.highSpeedDist.toFixed(0) + ' m'} />
+                <SplitMetric label="Sprint Dist" value={m.sprintDist.toFixed(0) + ' m'} />
+                <SplitMetric label="Dist to Max Spd" value={m.distToMax.toFixed(1) + ' m'} />
+                <SplitMetric label="Time to Max Spd" value={m.timeToMax.toFixed(1) + ' s'} />
                 <SplitMetric label="Duration" value={formatDuration(m.duration)} />
-                <SplitMetric label="Sprints" value={m.sprints} />
-                <SplitMetric label="Impacts" value={m.impacts} />
+                <SplitMetric label="Time Moving" value={formatDuration(m.timeMoving)} />
+                <SplitMetric label="Time Stationary" value={formatDuration(m.timeStationary)} />
+                <SplitMetric label={`Sprints (>${T.sprintSpeed} km/h)`} value={m.sprints} />
+                <SplitMetric label={`Runs (>${T.runSpeed} km/h)`} value={m.runs} />
+                <SplitMetric label={`Impacts (>${T.impactThresh} m/s²)`} value={m.impacts} />
                 <SplitMetric label="Peak Force" value={m.peakForce.toFixed(0) + ' N'} />
+                <SplitMetric label="Avg Force" value={m.avgForce.toFixed(0) + ' N'} />
                 <SplitMetric label="Peak Power" value={m.peakPower.toFixed(0) + ' W'} />
+                <SplitMetric label="Avg Power" value={m.avgPower.toFixed(0) + ' W'} />
                 <SplitMetric label="Calories" value={m.totalCal.toFixed(0) + ' kcal'} />
                 <SplitMetric label="Work" value={(m.work / 1000).toFixed(1) + ' kJ'} />
+                <SplitMetric label="Metabolic Power" value={m.metabolicPower.toFixed(1) + ' W/kg'} />
                 <SplitMetric label="Player Load" value={m.playerLoad.toFixed(0) + ' au'} />
+                <SplitMetric label="Player Load/min" value={m.plPerMin.toFixed(1) + ' au/min'} />
               </div>
             </div>
           );

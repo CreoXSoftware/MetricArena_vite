@@ -36,6 +36,8 @@ export function SessionProvider({ children }) {
   const [processedData, setProcessedData] = useState(null);
   const [thresholds, setThresholds] = useState(getDefaultThresholds);
   const [profile, setProfileState] = useState(loadProfile);
+  const [loadedSplits, setLoadedSplits] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
 
   const setProfile = useCallback((newProfile) => {
     setProfileState(newProfile);
@@ -44,6 +46,17 @@ export function SessionProvider({ children }) {
 
   const clearSession = useCallback(() => {
     setProcessedData(null);
+    setLoadedSplits([]);
+    setCurrentSessionId(null);
+  }, []);
+
+  /** Called when opening a session from history. Overrides thresholds with the
+   *  session's saved thresholds so the dashboard matches the original analysis. */
+  const loadSessionFromHistory = useCallback((data, sessionThresholds, sessionSplits, sessionId) => {
+    setProcessedData(data);
+    if (sessionThresholds) setThresholds(sessionThresholds);
+    setLoadedSplits(sessionSplits || []);
+    setCurrentSessionId(sessionId || null);
   }, []);
 
   return (
@@ -52,6 +65,9 @@ export function SessionProvider({ children }) {
       thresholds, setThresholds,
       profile, setProfile,
       clearSession,
+      loadedSplits, setLoadedSplits,
+      currentSessionId, setCurrentSessionId,
+      loadSessionFromHistory,
     }}>
       {children}
     </SessionContext.Provider>

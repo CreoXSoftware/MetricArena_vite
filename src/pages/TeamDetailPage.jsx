@@ -236,7 +236,11 @@ export default function TeamDetailPage() {
         ) : (
           <div className="team-sessions-list">
             {teamSessions.map(ts => (
-              <div key={ts.id} className="team-session-card">
+              <div
+                key={ts.id}
+                className="team-session-card team-session-card-clickable"
+                onClick={() => navigate(`/app/teams/${teamId}/sessions/${ts.id}`)}
+              >
                 <div className="team-session-card-top">
                   <span className="team-session-card-name">{ts.name}</span>
                   <span className="team-session-card-date">
@@ -246,7 +250,10 @@ export default function TeamDetailPage() {
                   </span>
                 </div>
                 {isCoach && (
-                  <button className="btn btn-sm btn-outline btn-danger" onClick={() => deleteTeamSession(ts.id)}>
+                  <button
+                    className="btn btn-sm btn-outline btn-danger"
+                    onClick={(e) => { e.stopPropagation(); deleteTeamSession(ts.id); }}
+                  >
                     Delete
                   </button>
                 )}

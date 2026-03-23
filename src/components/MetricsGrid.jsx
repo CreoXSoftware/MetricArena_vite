@@ -7,9 +7,8 @@ export default function MetricsGrid({ metrics, thresholds }) {
   const T = thresholds;
 
   const cards = [
-    { label: 'Max Speed', value: m.maxSpeed.toFixed(1), unit: 'km/h' },
-    { label: 'Max Speed', value: m.maxSpeedMs.toFixed(1), unit: 'm/s' },
-    { label: 'Avg Speed (moving)', value: m.avgSpeed.toFixed(1), unit: 'km/h' },
+    { label: 'Max Speed', value: m.maxSpeedMs.toFixed(2), unit: 'm/s' },
+    { label: 'Avg Speed (moving)', value: (m.avgSpeed / 3.6).toFixed(2), unit: 'm/s' },
     { label: 'Max Acceleration', value: m.maxAccel.toFixed(1), unit: 'm/s²' },
     { label: 'Max Deceleration', value: m.maxDecel.toFixed(1), unit: 'm/s²' },
     { label: 'Avg Acceleration', value: m.avgAccel.toFixed(2), unit: 'm/s²' },

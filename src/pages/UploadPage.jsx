@@ -10,7 +10,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTeamSessions } from '../hooks/useTeamSessions';
 import { useSessions } from '../hooks/useSessions';
 import { formatDuration } from '../utils/format';
-import { SPORTS } from '../utils/constants';
+import { SPORTS, SESSION_TYPES } from '../utils/constants';
+import { supabase } from '../lib/supabase';
+
+const STORAGE_BUCKET = 'session-files';
 
 /** Build a UTC Date from a raw parsed row's timestamp fields. */
 function rowToUTCDate(r) {
@@ -18,7 +21,7 @@ function rowToUTCDate(r) {
 }
 
 export default function UploadPage() {
-  const { profile, thresholds, setProcessedData } = useSession();
+  const { profile, thresholds, setProcessedData, setCurrentSessionId, setLoadedSplits } = useSession();
   const { user } = useAuth();
   const { myAvailableTeamSessions } = useTeamSessions();
   const { saveSession } = useSessions();
@@ -28,8 +31,11 @@ export default function UploadPage() {
 
   // Parsed rows waiting for session details before processing
   const [pendingRows, setPendingRows] = useState(null);
+  // Raw file blob for upload to Supabase Storage
+  const [pendingFileBlob, setPendingFileBlob] = useState(null);
   const [fileName, setFileName] = useState('');
   const [sessionSport, setSessionSport] = useState(profile.sport || 'general');
+  const [sessionType, setSessionType] = useState('practice');
   const [selectedTeamSessionId, setSelectedTeamSessionId] = useState('');
 
   const parseFile = useCallback((file) => {
@@ -49,6 +55,7 @@ export default function UploadPage() {
             rows = parseCSV(e.target.result);
           }
           setPendingRows(rows);
+          setPendingFileBlob(file);
           setFileName(file.name);
           setLoading(false);
         } catch (err) {
@@ -75,6 +82,7 @@ export default function UploadPage() {
         const ab = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
         const rows = parseBinary(ab, version);
         setPendingRows(rows);
+        setPendingFileBlob(new Blob([ab]));
         setFileName(filename);
         setLoading(false);
       } catch (err) {
@@ -95,9 +103,20 @@ export default function UploadPage() {
       const endUtc = rowToUTCDate(pendingRows[pendingRows.length - 1]);
       const durationSec = Math.max(0, (endUtc - startUtc) / 1000);
 
+      // Upload raw file to Supabase Storage
+      let filePath = null;
+      if (pendingFileBlob) {
+        const storageName = `${user.id}/${Date.now()}-${fileName}`;
+        const { error: uploadError } = await supabase.storage
+          .from(STORAGE_BUCKET)
+          .upload(storageName, pendingFileBlob, { upsert: false });
+        if (!uploadError) filePath = storageName;
+      }
+
       // Persist to Supabase
-      await saveSession({
+      const { data: saved } = await saveSession({
         sport: sessionSport,
+        session_type: sessionType,
         session_date: startUtc.toISOString(),
         duration: durationSec,
         metrics,
@@ -105,19 +124,24 @@ export default function UploadPage() {
         profile_snapshot: profile,
         team_session_id: selectedTeamSessionId || null,
         file_name: fileName,
+        file_path: filePath,
+        splits: [],
       });
 
+      setLoadedSplits([]);
       setProcessedData(data);
+      setCurrentSessionId(saved?.id || null);
       navigate('/app/dashboard');
     } catch (err) {
       console.error('Processing error:', err);
       setError(err.message);
       setLoading(false);
     }
-  }, [pendingRows, user, profile, thresholds, sessionSport, selectedTeamSessionId, fileName, setProcessedData, navigate, saveSession]);
+  }, [pendingRows, user, profile, thresholds, sessionSport, sessionType, selectedTeamSessionId, fileName, pendingFileBlob, setProcessedData, setCurrentSessionId, navigate, saveSession]);
 
   const handleCancel = useCallback(() => {
     setPendingRows(null);
+    setPendingFileBlob(null);
     setFileName('');
     setError(null);
   }, []);
@@ -176,14 +200,24 @@ export default function UploadPage() {
         </div>
 
         <div className="upload-details-card">
-          <label className="upload-details-label">
-            Sport
-            <select value={sessionSport} onChange={(e) => setSessionSport(e.target.value)}>
-              {SPORTS.map(s => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
-          </label>
+          <div className="upload-details-row">
+            <label className="upload-details-label">
+              Sport
+              <select value={sessionSport} onChange={(e) => setSessionSport(e.target.value)}>
+                {SPORTS.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="upload-details-label">
+              Session Type
+              <select value={sessionType} onChange={(e) => setSessionType(e.target.value)}>
+                {SESSION_TYPES.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           <label className="upload-details-label">
             Link to Team Session (optional)

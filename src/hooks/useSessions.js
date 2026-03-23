@@ -54,14 +54,28 @@ export function useSessions() {
     await fetchSessions();
   }, [fetchSessions]);
 
+  const updateSessionSplits = useCallback(async (sessionId, splits) => {
+    const { error } = await supabase
+      .from('sessions')
+      .update({ splits })
+      .eq('id', sessionId);
+    return error ? { error: error.message } : { ok: true };
+  }, []);
+
   const deleteSession = useCallback(async (sessionId) => {
+    // Delete associated storage file if present
+    const session = sessions.find(s => s.id === sessionId);
+    if (session?.file_path) {
+      await supabase.storage.from('session-files').remove([session.file_path]);
+    }
     await supabase.from('sessions').delete().eq('id', sessionId);
     await fetchSessions();
-  }, [fetchSessions]);
+  }, [fetchSessions, sessions]);
 
   return {
     sessions, loading, saveSession,
     linkToTeamSession, unlinkFromTeamSession, deleteSession,
+    updateSessionSplits,
     refreshSessions: fetchSessions,
   };
 }

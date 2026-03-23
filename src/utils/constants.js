@@ -5,3 +5,8 @@ export const SPORTS = [
   { value: 'athletics', label: 'Athletics / Track' },
   { value: 'general', label: 'General / Other' },
 ];
+
+export const SESSION_TYPES = [
+  { value: 'practice', label: 'Practice' },
+  { value: 'game', label: 'Game' },
+];
