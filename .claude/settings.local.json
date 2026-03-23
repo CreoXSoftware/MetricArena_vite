@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena -maxdepth 2 -type f \\\\\\(-name *.config.* -o -name tsconfig* -o -name .env* -o -name eslint* -o -name .* \\\\\\) ! -path */node_modules/*)",
+      "Bash(xargs -I {} basename {})",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx eslint:*)",
+      "Bash(grep -r \"role\\\\|visibility\\\\|team\\\\|coach\" c:/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena/src --include=*.jsx --include=*.js)"
+    ]
+  }
+}
