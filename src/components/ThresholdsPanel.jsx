@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { thresholdDefs } from '../utils/metrics';
 
-export default function ThresholdsPanel({ thresholds, onChange, onApply }) {
+export default function ThresholdsPanel({ thresholds, onChange, onApply, applyLabel = 'Apply & Recalculate' }) {
   const [open, setOpen] = useState(false);
   const [local, setLocal] = useState({ ...thresholds });
 
@@ -49,7 +49,7 @@ export default function ThresholdsPanel({ thresholds, onChange, onApply }) {
         </div>
         <div className="threshold-actions">
           <button className="btn btn-small" onClick={handleReset}>Reset Defaults</button>
-          <button className="btn btn-small btn-accent" onClick={handleApply}>Apply &amp; Recalculate</button>
+          <button className="btn btn-small btn-accent" onClick={handleApply}>{applyLabel}</button>
         </div>
       </div>
     </div>

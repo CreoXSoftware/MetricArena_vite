@@ -18,6 +18,8 @@ export function useSessions() {
     setSessions((data || []).map(s => ({
       ...s,
       team_session_name: s.team_sessions?.name || null,
+      team_session_id: s.team_sessions?.id || null,
+      team_id: s.team_sessions?.team_id || null,
       team_name: s.team_sessions?.teams?.name || null,
     })));
     setLoading(false);
@@ -62,6 +64,14 @@ export function useSessions() {
     return error ? { error: error.message } : { ok: true };
   }, []);
 
+  const updateSessionThresholds = useCallback(async (sessionId, thresholds) => {
+    const { error } = await supabase
+      .from('sessions')
+      .update({ thresholds })
+      .eq('id', sessionId);
+    return error ? { error: error.message } : { ok: true };
+  }, []);
+
   const deleteSession = useCallback(async (sessionId) => {
     // Delete associated storage file if present
     const session = sessions.find(s => s.id === sessionId);
@@ -75,7 +85,7 @@ export function useSessions() {
   return {
     sessions, loading, saveSession,
     linkToTeamSession, unlinkFromTeamSession, deleteSession,
-    updateSessionSplits,
+    updateSessionSplits, updateSessionThresholds,
     refreshSessions: fetchSessions,
   };
 }

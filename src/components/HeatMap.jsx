@@ -55,13 +55,39 @@ export default function HeatMap({ data, chartView }) {
   const heatLayerRef = useRef(null);
   const polylineRef = useRef(null);
 
-  const radiusRef = useRef(15);
-  const intensityRef = useRef(0.8);
-  const modeRef = useRef('density');
-
   const [radius, setRadius] = React.useState(15);
   const [intensity, setIntensity] = React.useState(8);
   const [mode, setMode] = React.useState('density');
+  const [speedThreshold, setSpeedThreshold] = React.useState(null);
+  const [accelThreshold, setAccelThreshold] = React.useState(null);
+
+  // Derive session-wide min/max from data for slider bounds
+  const sessionStats = React.useMemo(() => {
+    if (!data || !data.length) return null;
+    let sMin = Infinity, sMax = -Infinity, aMin = Infinity, aMax = -Infinity;
+    for (const d of data) {
+      if (d.speed  < sMin) sMin = d.speed;
+      if (d.speed  > sMax) sMax = d.speed;
+      if (d.linMag < aMin) aMin = d.linMag;
+      if (d.linMag > aMax) aMax = d.linMag;
+    }
+    return {
+      speed: { min: Math.floor(sMin), max: Math.ceil(sMax) },
+      accel: { min: Math.floor(aMin * 10) / 10, max: Math.ceil(aMax * 10) / 10 },
+    };
+  }, [data]);
+
+  // Initialise thresholds to session max when data first loads
+  React.useEffect(() => {
+    if (!sessionStats) return;
+    setSpeedThreshold(sessionStats.speed.max);
+    setAccelThreshold(sessionStats.accel.max);
+  }, [sessionStats]);
+
+  const threshold = mode === 'speed' ? speedThreshold : accelThreshold;
+  const setThreshold = mode === 'speed' ? setSpeedThreshold : setAccelThreshold;
+  const thresholdMeta = sessionStats?.[mode === 'speed' ? 'speed' : 'accel'];
+  const thresholdUnit = mode === 'speed' ? 'km/h' : 'g';
 
   // Init map
   useEffect(() => {
@@ -109,27 +135,23 @@ export default function HeatMap({ data, chartView }) {
         const layerOpts = { radius, blur: Math.max(1, radius * 0.8), maxZoom: 20, max: 1.0, gradient };
         heatLayerRef.current = L.heatLayer(heatPoints, layerOpts).addTo(map);
       } else {
-        // Value mode: colour each point directly by its normalised value.
-        // L.circleMarker avoids leaflet.heat's blob accumulation entirely.
+        // Value mode: colour each path segment by its value clamped to the user threshold.
         const field = mode === 'speed' ? 'speed' : 'linMag';
-        const sampled = spatialSubsample(viewData, 2);
+        const ceil = mode === 'speed' ? speedThreshold : accelThreshold;
+        const sampled = spatialSubsample(viewData, 1);
         const vals = sampled.map(d => d[field]);
-        const maxVal = Math.max(...vals) || 1;
-        const dotRadius = Math.max(2, Math.round(radius / 4));
-        const renderer = L.canvas({ padding: 0.5 });
-        const markers = sampled.map((d, i) =>
-          L.circleMarker([d.lat, d.lon], {
-            radius: dotRadius,
-            fillColor: valueToColor(vals[i] / maxVal),
-            fillOpacity: Math.min(1, int * 0.9),
-            stroke: false,
-            renderer,
-          })
-        );
-        heatLayerRef.current = L.layerGroup(markers).addTo(map);
+        const segments = [];
+        for (let i = 0; i < sampled.length - 1; i++) {
+          const t = ((vals[i] + vals[i + 1]) / 2) / ceil;
+          segments.push(L.polyline(
+            [[sampled[i].lat, sampled[i].lon], [sampled[i + 1].lat, sampled[i + 1].lon]],
+            { color: valueToColor(t), weight: 3, opacity: Math.min(1, int * 0.9) }
+          ));
+        }
+        heatLayerRef.current = L.layerGroup(segments).addTo(map);
       }
     });
-  }, [data, chartView, radius, intensity, mode]);
+  }, [data, chartView, radius, intensity, mode, speedThreshold, accelThreshold]);
 
   return (
     <div className="section">
@@ -147,14 +169,31 @@ export default function HeatMap({ data, chartView }) {
             <option value="accel">Acceleration</option>
           </select>
         </div>
-        <div className="ctrl-group">
-          <label>Radius: <span>{radius}</span></label>
-          <input type="range" min="5" max="50" value={radius} onChange={e => setRadius(+e.target.value)} />
-        </div>
-        <div className="ctrl-group">
-          <label>Intensity: <span>{(intensity / 10).toFixed(1)}</span></label>
-          <input type="range" min="1" max="20" value={intensity} onChange={e => setIntensity(+e.target.value)} />
-        </div>
+        {mode === 'density' && (
+          <div className="ctrl-group">
+            <label>Radius: <span>{radius}</span></label>
+            <input type="range" min="5" max="50" value={radius} onChange={e => setRadius(+e.target.value)} />
+          </div>
+        )}
+        {mode !== 'density' && thresholdMeta && threshold !== null && (
+          <div className="ctrl-group">
+            <label>Max: <span>{threshold} {thresholdUnit}</span></label>
+            <input
+              type="range"
+              min={thresholdMeta.min}
+              max={thresholdMeta.max}
+              step={mode === 'accel' ? 0.1 : 1}
+              value={threshold}
+              onChange={e => setThreshold(+e.target.value)}
+            />
+          </div>
+        )}
+        {mode === 'density' && (
+          <div className="ctrl-group">
+            <label>Intensity: <span>{(intensity / 10).toFixed(1)}</span></label>
+            <input type="range" min="1" max="20" value={intensity} onChange={e => setIntensity(+e.target.value)} />
+          </div>
+        )}
       </div>
     </div>
   );

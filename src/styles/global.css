@@ -1157,6 +1157,26 @@ body {
 .nav-link.active { color: var(--accent); background: rgba(0,229,160,0.08); }
 .nav-link.disabled { opacity: 0.35; cursor: default; pointer-events: none; }
 
+.navbar-sport-select {
+  appearance: none;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 28px 5px 10px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.navbar-sport-select:hover { border-color: var(--accent2); }
+.navbar-sport-select:focus { outline: none; border-color: var(--accent2); }
+.navbar-sport-select option { background: var(--surface); }
+
 .navbar-user {
   display: flex;
   align-items: center;
@@ -1939,7 +1959,7 @@ body {
 
 /* ── Team Session Detail Page ── */
 .ts-detail-page {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 24px 20px;
   display: flex;
@@ -1998,7 +2018,9 @@ body {
 .ts-player-row-own:hover { background: rgba(0, 229, 160, 0.08); }
 .ts-player-row-expanded { background: rgba(0, 229, 160, 0.1) !important; }
 
-.ts-col-player { min-width: 160px; }
+.ts-col-player { min-width: 140px; }
+.ts-comparison-table th:not(:first-child),
+.ts-comparison-table td:not(:first-child) { min-width: 90px; white-space: nowrap; }
 
 .ts-player-cell {
   display: flex;
@@ -2317,6 +2339,33 @@ body {
   color: var(--text-dim);
 }
 
+.team-session-tag-clickable { cursor: pointer; }
+.team-session-tag-clickable:hover .team-session-tag-team,
+.team-session-tag-clickable:hover .team-session-tag-name { opacity: 0.8; }
+
+.team-session-tag-unlink {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--accent3);
+  cursor: pointer;
+  padding: 0;
+  margin-left: 3px;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.team-session-tag-unlinkable:hover .team-session-tag-unlink {
+  display: inline-flex;
+}
+
+.team-session-tag-unlink:hover {
+  opacity: 1;
+}
+
 /* ============================================
    EMPTY STATES
    ============================================ */
@@ -2356,4 +2405,5 @@ body {
   .nav-link { padding: 6px 8px; font-size: 12px; }
   .navbar-displayname { display: none; }
   .navbar-role-badge { display: none; }
+  .navbar-sport-select { display: none; }
 }

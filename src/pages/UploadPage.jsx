@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTeamSessions } from '../hooks/useTeamSessions';
 import { useSessions } from '../hooks/useSessions';
 import { formatDuration } from '../utils/format';
-import { SPORTS, SESSION_TYPES } from '../utils/constants';
+import { SESSION_TYPES } from '../utils/constants';
 import { supabase } from '../lib/supabase';
 
 const STORAGE_BUCKET = 'session-files';
@@ -21,7 +21,7 @@ function rowToUTCDate(r) {
 }
 
 export default function UploadPage() {
-  const { profile, thresholds, setProcessedData, setCurrentSessionId, setLoadedSplits } = useSession();
+  const { profile, thresholds, setProcessedData, setCurrentSessionId, setLoadedSplits, activeSport } = useSession();
   const { user } = useAuth();
   const { myAvailableTeamSessions } = useTeamSessions();
   const { saveSession } = useSessions();
@@ -34,7 +34,6 @@ export default function UploadPage() {
   // Raw file blob for upload to Supabase Storage
   const [pendingFileBlob, setPendingFileBlob] = useState(null);
   const [fileName, setFileName] = useState('');
-  const [sessionSport, setSessionSport] = useState(profile.sport || 'general');
   const [sessionType, setSessionType] = useState('practice');
   const [selectedTeamSessionId, setSelectedTeamSessionId] = useState('');
 
@@ -115,7 +114,7 @@ export default function UploadPage() {
 
       // Persist to Supabase
       const { data: saved } = await saveSession({
-        sport: sessionSport,
+        sport: activeSport === 'all' ? (profile.sport || 'general') : activeSport,
         session_type: sessionType,
         session_date: startUtc.toISOString(),
         duration: durationSec,
@@ -137,7 +136,7 @@ export default function UploadPage() {
       setError(err.message);
       setLoading(false);
     }
-  }, [pendingRows, user, profile, thresholds, sessionSport, sessionType, selectedTeamSessionId, fileName, pendingFileBlob, setProcessedData, setCurrentSessionId, navigate, saveSession]);
+  }, [pendingRows, user, profile, thresholds, activeSport, sessionType, selectedTeamSessionId, fileName, pendingFileBlob, setProcessedData, setCurrentSessionId, navigate, saveSession]);
 
   const handleCancel = useCallback(() => {
     setPendingRows(null);
@@ -201,14 +200,6 @@ export default function UploadPage() {
 
         <div className="upload-details-card">
           <div className="upload-details-row">
-            <label className="upload-details-label">
-              Sport
-              <select value={sessionSport} onChange={(e) => setSessionSport(e.target.value)}>
-                {SPORTS.map(s => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
-            </label>
             <label className="upload-details-label">
               Session Type
               <select value={sessionType} onChange={(e) => setSessionType(e.target.value)}>

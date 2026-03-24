@@ -16,7 +16,7 @@ import { useSessions } from '../hooks/useSessions';
 
 export default function DashboardPage() {
   const { processedData, profile, thresholds, setThresholds, loadedSplits, currentSessionId } = useSession();
-  const { updateSessionSplits } = useSessions();
+  const { updateSessionSplits, updateSessionThresholds } = useSessions();
 
   const [localThresholds, setLocalThresholds] = useState(thresholds);
   const [chartView, setChartView] = useState(() => ({
@@ -61,7 +61,8 @@ export default function DashboardPage() {
 
   const handleThresholdsApply = useCallback(() => {
     setThresholds(localThresholds);
-  }, [localThresholds, setThresholds]);
+    if (currentSessionId) updateSessionThresholds(currentSessionId, localThresholds);
+  }, [localThresholds, setThresholds, currentSessionId, updateSessionThresholds]);
 
   // Auto-save splits to DB whenever the splits array changes (add/delete/rename/combine).
   // Skip the initial mount to avoid overwriting DB splits with the loaded state.

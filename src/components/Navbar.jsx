@@ -1,9 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { BrandSmall } from './Brand';
 import { useAuth } from '../contexts/AuthContext';
+import { useSession } from '../contexts/SessionContext';
+import { SPORTS } from '../utils/constants';
 
 export default function Navbar() {
   const { profile, signOut } = useAuth();
+  const { activeSport, setActiveSport } = useSession();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -34,6 +37,17 @@ export default function Navbar() {
           Leaderboard
         </NavLink>
       </div>
+
+      <select
+        className="navbar-sport-select"
+        value={activeSport}
+        onChange={(e) => setActiveSport(e.target.value)}
+      >
+        <option value="all">All Sports</option>
+        {SPORTS.map(s => (
+          <option key={s.value} value={s.value}>{s.label}</option>
+        ))}
+      </select>
 
       <div className="navbar-user">
         <NavLink to="/app/profile" className="navbar-profile-link">

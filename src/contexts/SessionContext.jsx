@@ -1,5 +1,14 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { getDefaultThresholds } from '../utils/metrics';
+import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
+
+function loadActiveSport() {
+  try { return localStorage.getItem('metricarena_active_sport') || 'all'; } catch { return 'all'; }
+}
+function saveActiveSport(s) {
+  try { localStorage.setItem('metricarena_active_sport', s); } catch { /* ignore */ }
+}
 
 const DEFAULT_PROFILE = {
   weight: 75,
@@ -11,16 +20,17 @@ const DEFAULT_PROFILE = {
   vo2max: 0,
 };
 
-function loadProfile() {
+// localStorage cache for fast initial render / offline fallback
+function loadCachedProfile() {
   try {
-    const saved = localStorage.getItem('metricarena_profile');
-    if (saved) return { ...DEFAULT_PROFILE, ...JSON.parse(saved) };
+    const s = localStorage.getItem('metricarena_profile');
+    if (s) return { ...DEFAULT_PROFILE, ...JSON.parse(s) };
   } catch { /* ignore */ }
   return DEFAULT_PROFILE;
 }
 
-function saveProfileToStorage(profile) {
-  try { localStorage.setItem('metricarena_profile', JSON.stringify(profile)); } catch { /* ignore */ }
+function saveCachedProfile(p) {
+  try { localStorage.setItem('metricarena_profile', JSON.stringify(p)); } catch { /* ignore */ }
 }
 
 const SessionContext = createContext(null);
@@ -33,16 +43,59 @@ export function useSession() {
 }
 
 export function SessionProvider({ children }) {
+  const { user, profile: authProfile } = useAuth();
+
   const [processedData, setProcessedData] = useState(null);
-  const [thresholds, setThresholds] = useState(getDefaultThresholds);
-  const [profile, setProfileState] = useState(loadProfile);
+  const [profile, setProfileState] = useState(loadCachedProfile);
+  const [thresholds, setThresholds] = useState(() => {
+    // Use cached defaults until DB loads
+    const cached = loadCachedProfile();
+    return cached._defaultThresholds || getDefaultThresholds();
+  });
   const [loadedSplits, setLoadedSplits] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [activeSport, setActiveSportState] = useState(loadActiveSport);
 
-  const setProfile = useCallback((newProfile) => {
-    setProfileState(newProfile);
-    saveProfileToStorage(newProfile);
+  const setActiveSport = useCallback((sport) => {
+    setActiveSportState(sport);
+    saveActiveSport(sport);
   }, []);
+
+  // Sync from DB whenever the auth profile loads or changes
+  useEffect(() => {
+    if (!authProfile) return;
+    if (authProfile.athlete_profile) {
+      const p = { ...DEFAULT_PROFILE, ...authProfile.athlete_profile };
+      setProfileState(p);
+      saveCachedProfile(p);
+    }
+    if (authProfile.default_thresholds) {
+      setThresholds(authProfile.default_thresholds);
+    }
+  }, [authProfile]);
+
+  /** Persist athlete profile to DB and update local state. */
+  const setProfile = useCallback(async (newProfile) => {
+    setProfileState(newProfile);
+    saveCachedProfile(newProfile);
+    if (!user) return { error: 'Not signed in' };
+    const { error } = await supabase
+      .from('profiles')
+      .update({ athlete_profile: newProfile, updated_at: new Date().toISOString() })
+      .eq('id', user.id);
+    return error ? { error: error.message } : { ok: true };
+  }, [user]);
+
+  /** Persist default thresholds to DB and update context thresholds. */
+  const saveDefaultThresholds = useCallback(async (newThresholds) => {
+    setThresholds(newThresholds);
+    if (!user) return { error: 'Not signed in' };
+    const { error } = await supabase
+      .from('profiles')
+      .update({ default_thresholds: newThresholds, updated_at: new Date().toISOString() })
+      .eq('id', user.id);
+    return error ? { error: error.message } : { ok: true };
+  }, [user]);
 
   const clearSession = useCallback(() => {
     setProcessedData(null);
@@ -50,8 +103,7 @@ export function SessionProvider({ children }) {
     setCurrentSessionId(null);
   }, []);
 
-  /** Called when opening a session from history. Overrides thresholds with the
-   *  session's saved thresholds so the dashboard matches the original analysis. */
+  /** Called when opening a session from history — overrides thresholds with the session's own saved values. */
   const loadSessionFromHistory = useCallback((data, sessionThresholds, sessionSplits, sessionId) => {
     setProcessedData(data);
     if (sessionThresholds) setThresholds(sessionThresholds);
@@ -64,10 +116,12 @@ export function SessionProvider({ children }) {
       processedData, setProcessedData,
       thresholds, setThresholds,
       profile, setProfile,
+      saveDefaultThresholds,
       clearSession,
       loadedSplits, setLoadedSplits,
       currentSessionId, setCurrentSessionId,
       loadSessionFromHistory,
+      activeSport, setActiveSport,
     }}>
       {children}
     </SessionContext.Provider>

@@ -13,7 +13,8 @@ import { supabase } from '../lib/supabase';
 export default function SessionHistoryPage() {
   const { sessions, loading, linkToTeamSession, unlinkFromTeamSession, deleteSession } = useSessions();
   const { myAvailableTeamSessions } = useTeamSessions();
-  const { loadSessionFromHistory } = useSession();
+  const { loadSessionFromHistory, activeSport } = useSession();
+  const visibleSessions = activeSport === 'all' ? sessions : sessions.filter(s => s.sport === activeSport);
   const navigate = useNavigate();
   const [linkingId, setLinkingId] = useState(null);
   const [openingId, setOpeningId] = useState(null);
@@ -75,14 +76,14 @@ export default function SessionHistoryPage() {
         </div>
       )}
 
-      {sessions.length === 0 ? (
+      {visibleSessions.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-title">No sessions yet</div>
           <p className="empty-state-desc">Upload a session file to get started.</p>
         </div>
       ) : (
         <div className="sessions-list">
-          {sessions.map(s => {
+          {visibleSessions.map(s => {
             const date = new Date(s.session_date);
             const metrics = s.metrics || {};
             const isOpening = openingId === s.id;
@@ -148,13 +149,12 @@ export default function SessionHistoryPage() {
                   <div className="session-card-tags">
                     {s.team_session_name && s.team_name ? (
                       <div className="session-card-tag-row">
-                        <TeamSessionTag teamName={s.team_name} sessionName={s.team_session_name} />
-                        <button
-                          className="btn-link btn-link-dim"
-                          onClick={(e) => { e.stopPropagation(); unlinkFromTeamSession(s.id); }}
-                        >
-                          unlink
-                        </button>
+                        <TeamSessionTag
+                          teamName={s.team_name}
+                          sessionName={s.team_session_name}
+                          onUnlink={() => unlinkFromTeamSession(s.id)}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/app/teams/${s.team_id}/sessions/${s.team_session_id}`); }}
+                        />
                       </div>
                     ) : (
                       linkingId === s.id ? (

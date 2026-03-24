@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTeams } from '../hooks/useTeams';
+import { useSession } from '../contexts/SessionContext';
 import { SPORTS } from '../utils/constants';
 
 export default function TeamsPage() {
   const { myTeams, loading, createTeam, joinTeam } = useTeams();
+  const { activeSport } = useSession();
+  const visibleTeams = activeSport === 'all' ? myTeams : myTeams.filter(t => t.sport === activeSport);
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
@@ -106,14 +109,14 @@ export default function TeamsPage() {
         </form>
       )}
 
-      {myTeams.length === 0 && !showCreate && !showJoin ? (
+      {visibleTeams.length === 0 && !showCreate && !showJoin ? (
         <div className="empty-state">
           <div className="empty-state-title">No teams yet</div>
           <p className="empty-state-desc">Create a team or join one with an invite code.</p>
         </div>
       ) : (
         <div className="teams-list">
-          {myTeams.map(team => (
+          {visibleTeams.map(team => (
             <div key={team.id} className="team-card" onClick={() => navigate(`/app/teams/${team.id}`)}>
               <div className="team-card-top">
                 <span className="team-card-name">{team.name}</span>
