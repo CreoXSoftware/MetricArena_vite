@@ -1812,9 +1812,9 @@ body {
    TEAM DETAIL PAGE
    ============================================ */
 .team-detail-page {
-  max-width: 800px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 24px 20px;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -2114,6 +2114,10 @@ body {
   background: rgba(0, 229, 160, 0.03);
 }
 
+.ts-expanded-panel-clickable {
+  cursor: pointer;
+}
+
 .ts-expanded-header {
   display: flex;
   align-items: center;
@@ -2322,6 +2326,12 @@ body {
 }
 
 .filter-date:focus { border-color: var(--accent); }
+
+.filter-date::-webkit-calendar-picker-indicator {
+  filter: brightness(0) saturate(100%) invert(58%) sepia(91%) saturate(646%) hue-rotate(167deg) brightness(107%) contrast(107%);
+  cursor: pointer;
+  opacity: 0.85;
+}
 
 .filter-date-sep {
   color: var(--text-dim);
@@ -2629,6 +2639,7 @@ body {
 
 .btn-link:hover { text-decoration: underline; }
 .btn-link-dim { color: var(--text-dim); font-size: 11px; }
+.back-btn { font-size: 13px; white-space: nowrap; }
 
 /* ============================================
    TEAM SESSION TAG (pill)

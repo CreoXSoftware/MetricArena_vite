@@ -109,7 +109,11 @@ export default function TeamDetailPage() {
   return (
     <div className="team-detail-page">
       <div className="team-detail-header">
-        <div className="team-header-identity">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button className="btn-link back-btn" onClick={() => navigate('/app/teams')}>
+            ← Teams
+          </button>
+          <div className="team-header-identity">
           <div
             className={`team-avatar-wrapper${isManager ? ' team-avatar-clickable' : ''}`}
             onClick={isManager ? () => teamAvatarInputRef.current?.click() : undefined}
@@ -141,6 +145,7 @@ export default function TeamDetailPage() {
               {SPORTS.find(s => s.value === team.sport)?.label || team.sport}
             </div>
           </div>
+        </div>
         </div>
         <div className="team-invite-section">
           <span className="team-invite-label">Invite Code</span>

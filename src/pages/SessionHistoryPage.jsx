@@ -23,12 +23,11 @@ export default function SessionHistoryPage() {
   const { sessions, loading: sessionsLoading, loadingMore: sessionsLoadingMore, hasMore: sessionsHasMore, loadMoreSessions, linkToTeamSession, unlinkFromTeamSession, deleteSession } = useSessions();
   const { myAvailableTeamSessions, loading: teamSessionsLoading, loadingMore: tsLoadingMore, hasMore: tsHasMore, loadMoreTeamSessions, createTeamSession, updateTeamSession, deleteTeamSession, refreshAvailable } = useTeamSessions();
   const { myTeams } = useTeams();
-  const { loadSessionFromHistory } = useSession();
+  const { loadSessionFromHistory, activeSport } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [viewMode, setViewMode] = useState(location.state?.viewMode || 'individual');
-  const [filterSport, setFilterSport] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [filterTeam, setFilterTeam] = useState('all');
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -89,7 +88,7 @@ export default function SessionHistoryPage() {
       }
       const data = processSession(rows);
       loadSessionFromHistory(data, s.thresholds, s.splits || [], s.id);
-      navigate('/app/dashboard');
+      navigate('/app/dashboard', { state: { from: 'sessions' } });
     } catch (err) {
       console.error('Failed to open session:', err);
       setOpenError(err.message);
@@ -116,24 +115,23 @@ export default function SessionHistoryPage() {
   };
 
   const clearFilters = () => {
-    setFilterSport('all');
     setFilterType('all');
     setFilterTeam('all');
     setFilterDateFrom('');
     setFilterDateTo('');
   };
 
-  const hasActiveFilters = filterSport !== 'all' || filterType !== 'all' || filterTeam !== 'all' || filterDateFrom || filterDateTo;
+  const hasActiveFilters = filterType !== 'all' || filterTeam !== 'all' || filterDateFrom || filterDateTo;
 
   const filteredSessions = useMemo(() => sessions.filter(s => {
-    if (filterSport !== 'all' && s.sport !== filterSport) return false;
+    if (activeSport !== 'all' && s.sport !== activeSport) return false;
     if (filterType !== 'all' && s.session_type !== filterType) return false;
     if (filterTeam === 'none' && s.team_id) return false;
     if (filterTeam !== 'all' && filterTeam !== 'none' && s.team_id !== filterTeam) return false;
     if (filterDateFrom && s.session_date < filterDateFrom) return false;
     if (filterDateTo && s.session_date > filterDateTo) return false;
     return true;
-  }), [sessions, filterSport, filterType, filterTeam, filterDateFrom, filterDateTo]);
+  }), [sessions, activeSport, filterType, filterTeam, filterDateFrom, filterDateTo]);
 
   const filteredTeamSessions = useMemo(() => myAvailableTeamSessions
     .filter(ts => {
@@ -171,7 +169,7 @@ export default function SessionHistoryPage() {
           </button>
           <button
             className={`sessions-mode-btn${viewMode === 'team' ? ' active' : ''}`}
-            onClick={() => { setViewMode('team'); setFilterSport('all'); setFilterType('all'); }}
+            onClick={() => { setViewMode('team'); setFilterType('all'); }}
           >
             Team Sessions
           </button>
@@ -181,10 +179,6 @@ export default function SessionHistoryPage() {
       <div className="sessions-filters">
         {viewMode === 'individual' && (
           <>
-            <select value={filterSport} onChange={e => setFilterSport(e.target.value)} className="filter-select">
-              <option value="all">All sports</option>
-              {SPORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
             <select value={filterType} onChange={e => setFilterType(e.target.value)} className="filter-select">
               <option value="all">Game &amp; Practice</option>
               {SESSION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}

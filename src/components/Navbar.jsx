@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { BrandSmall } from './Brand';
 import { useAuth } from '../contexts/AuthContext';
 import { useSession } from '../contexts/SessionContext';
@@ -8,6 +8,8 @@ export default function Navbar() {
   const { profile, signOut } = useAuth();
   const { activeSport, setActiveSport } = useSession();
   const navigate = useNavigate();
+  const location = useLocation();
+  const sessionsDashboard = location.pathname === '/app/dashboard' && location.state?.from === 'sessions';
 
   const handleSignOut = async () => {
     await signOut();
@@ -27,7 +29,7 @@ export default function Navbar() {
         <NavLink to="/app/upload" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
           Upload
         </NavLink>
-        <NavLink to="/app/sessions" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+        <NavLink to="/app/sessions" className={({ isActive }) => `nav-link ${isActive || sessionsDashboard ? 'active' : ''}`}>
           Sessions
         </NavLink>
         <NavLink to="/app/teams" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>

@@ -160,7 +160,7 @@ export default function ProfilePage() {
               onChange={e => handleAthleteFormChange('maxHR', parseInt(e.target.value) || 195)} />
           </div>
           <div className="field">
-            <label>Sex</label>
+            <label>Gender</label>
             <select value={athleteForm.sex} onChange={e => handleAthleteFormChange('sex', e.target.value)}>
               <option value="male">Male</option>
               <option value="female">Female</option>

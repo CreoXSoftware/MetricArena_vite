@@ -116,8 +116,8 @@ export default function TeamSessionDetailPage() {
   return (
     <div className="ts-detail-page">
       <div className="ts-detail-header">
-        <button className="btn btn-outline btn-sm" onClick={() => navigate('/app/sessions', { state: { viewMode: 'team' } })}>
-          ← Back
+        <button className="btn-link back-btn" onClick={() => navigate('/app/sessions', { state: { viewMode: 'team' } })}>
+          ← Sessions
         </button>
         {editing ? (
           <form className="ts-edit-form" onSubmit={handleSaveEdit}>

@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Navigate } from 'react-router-dom';
-import { BrandSmall } from '../components/Brand';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import MetricsGrid from '../components/MetricsGrid';
 import SpeedZones from '../components/SpeedZones';
 import ThresholdsPanel from '../components/ThresholdsPanel';
@@ -14,9 +13,12 @@ import { formatDuration } from '../utils/format';
 import { useSession } from '../contexts/SessionContext';
 import { useSessions } from '../hooks/useSessions';
 
-export default function DashboardPage() {
+export default function SessionDetailPage() {
   const { processedData, profile, thresholds, setThresholds, loadedSplits, currentSessionId } = useSession();
   const { updateSessionSplits, updateSessionThresholds } = useSessions();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const fromSessions = location.state?.from === 'sessions';
 
   const [localThresholds, setLocalThresholds] = useState(thresholds);
   const [chartView, setChartView] = useState(() => ({
@@ -172,8 +174,12 @@ export default function DashboardPage() {
   return (
     <div className="dashboard">
       <div className="dash-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-          <BrandSmall />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {fromSessions && (
+            <button className="btn-link back-btn" onClick={() => navigate('/app/sessions')}>
+              ← Sessions
+            </button>
+          )}
           <div>
             <h2>Session Overview</h2>
             <div className="session-info">{sessionInfo}</div>

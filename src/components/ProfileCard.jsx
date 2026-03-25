@@ -30,7 +30,7 @@ export default function ProfileCard({ profile, onChange }) {
             onChange={e => handleChange('maxHR', parseInt(e.target.value) || 195)} />
         </div>
         <div className="field">
-          <label>Sex</label>
+          <label>Gender</label>
           <select value={profile.sex} onChange={e => handleChange('sex', e.target.value)}>
             <option value="male">Male</option>
             <option value="female">Female</option>

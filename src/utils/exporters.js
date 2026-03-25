@@ -65,7 +65,7 @@ export function exportMetricsCSV(processedData, profile, thresholds, splits) {
     '# height (cm),' + profile.height,
     '# age (yr),' + profile.age,
     '# maxHR (bpm),' + profile.maxHR,
-    '# sex,' + profile.sex,
+    '# gender,' + profile.sex,
     '# sport,' + profile.sport,
     '# vo2max (mL/kg/min),' + profile.vo2max,
     '#',

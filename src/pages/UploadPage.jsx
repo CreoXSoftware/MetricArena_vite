@@ -34,7 +34,7 @@ export default function UploadPage() {
   // Raw file blob for upload to Supabase Storage
   const [pendingFileBlob, setPendingFileBlob] = useState(null);
   const [fileName, setFileName] = useState('');
-  const [sessionType, setSessionType] = useState('practice');
+  const [sessionType, setSessionType] = useState('game');
   const [selectedTeamSessionId, setSelectedTeamSessionId] = useState('');
 
   const parseFile = useCallback((file) => {

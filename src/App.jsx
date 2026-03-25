@@ -6,7 +6,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import UploadPage from './pages/UploadPage';
-import DashboardPage from './pages/DashboardPage';
+import SessionDetailPage from './pages/SessionDetailPage';
 import ProfilePage from './pages/ProfilePage';
 import TeamsPage from './pages/TeamsPage';
 import TeamDetailPage from './pages/TeamDetailPage';
@@ -26,7 +26,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="upload" replace />} />
           <Route path="upload" element={<UploadPage />} />
-          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="dashboard" element={<SessionDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="teams" element={<TeamsPage />} />
           <Route path="teams/:teamId" element={<TeamDetailPage />} />
