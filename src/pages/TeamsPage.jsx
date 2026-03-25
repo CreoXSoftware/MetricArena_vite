@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTeams } from '../hooks/useTeams';
 import { useSession } from '../contexts/SessionContext';
-import { SPORTS } from '../utils/constants';
+
 
 export default function TeamsPage() {
   const { myTeams, loading, createTeam, joinTeam } = useTeams();
@@ -12,7 +12,7 @@ export default function TeamsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newSport, setNewSport] = useState('general');
+  const [newIsPlayer, setNewIsPlayer] = useState(true);
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -22,10 +22,12 @@ export default function TeamsPage() {
     if (!newName.trim()) return;
     setSubmitting(true);
     setError(null);
-    const { error: err } = await createTeam(newName.trim(), newSport);
+    const sport = activeSport === 'all' ? 'general' : activeSport;
+    const { error: err } = await createTeam(newName.trim(), sport, newIsPlayer);
     setSubmitting(false);
     if (err) { setError(err); return; }
     setNewName('');
+    setNewIsPlayer(true);
     setShowCreate(false);
   };
 
@@ -76,9 +78,14 @@ export default function TeamsPage() {
             required
             autoFocus
           />
-          <select value={newSport} onChange={(e) => setNewSport(e.target.value)}>
-            {SPORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
+          <label className="teams-checkbox-label">
+            <input
+              type="checkbox"
+              checked={newIsPlayer}
+              onChange={e => setNewIsPlayer(e.target.checked)}
+            />
+            I am also a player in this team
+          </label>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="submit" className="btn btn-accent" disabled={submitting}>
               {submitting ? 'Creating…' : 'Create'}
@@ -119,12 +126,17 @@ export default function TeamsPage() {
           {visibleTeams.map(team => (
             <div key={team.id} className="team-card" onClick={() => navigate(`/app/teams/${team.id}`)}>
               <div className="team-card-top">
+                {team.avatar_url ? (
+                  <img src={team.avatar_url} alt="" className="team-card-avatar" />
+                ) : (
+                  <div className="team-card-avatar-placeholder">
+                    {(team.name || 'T').charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <span className="team-card-name">{team.name}</span>
-                {team.is_coach && <span className="coach-badge">Coach</span>}
+                {team.is_manager && <span className="manager-badge">Manager</span>}
               </div>
-              <div className="team-card-meta">
-                {SPORTS.find(s => s.value === team.sport)?.label || team.sport}
-              </div>
+
             </div>
           ))}
         </div>

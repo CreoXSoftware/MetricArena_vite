@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTeams } from '../hooks/useTeams';
 import { useTeamSessions } from '../hooks/useTeamSessions';
 import { useTeamSessionDetail } from '../hooks/useTeamSessionDetail';
+import { computeTeamAggregate } from '../hooks/useTeamSessions';
 import { useSession } from '../contexts/SessionContext';
 import { parseBinary, parseCSV, inferBinaryVersion } from '../utils/parsers';
 import { processSession } from '../utils/processing';
@@ -32,21 +33,46 @@ const SUMMARY_COLS = [
 ];
 
 export default function TeamSessionDetailPage() {
-  const { teamId, teamSessionId } = useParams();
+  const { teamSessionId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { myTeams } = useTeams();
-  const { teamSessions } = useTeamSessions(teamId);
+  const { myAvailableTeamSessions, updateTeamSession } = useTeamSessions();
   const { playerSessions, loading } = useTeamSessionDetail(teamSessionId);
   const { loadSessionFromHistory } = useSession();
 
   const [openingId, setOpeningId] = useState(null);
   const [openError, setOpenError] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editTeamId, setEditTeamId] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
+  const managerTeams = myTeams.filter(t => t.is_manager);
+
+  const startEdit = () => {
+    setEditName(teamSession?.name || '');
+    setEditDate(teamSession?.session_date || '');
+    setEditTeamId(teamSession?.team_id || '');
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    setEditSubmitting(true);
+    await updateTeamSession(teamSessionId, { name: editName, session_date: editDate, team_id: editTeamId });
+    setEditSubmitting(false);
+    setEditing(false);
+  };
+
+  const teamSession = myAvailableTeamSessions.find(ts => ts.id === teamSessionId);
+  const teamId = teamSession?.team_id;
   const team = myTeams.find(t => t.id === teamId);
-  const isCoach = team?.is_coach || false;
-  const teamSession = teamSessions.find(ts => ts.id === teamSessionId);
+  const isManager = team?.is_manager || false;
+
+  const aggregate = useMemo(() => computeTeamAggregate(playerSessions), [playerSessions]);
 
   const openSession = async (s) => {
     if (!s.file_path) { setOpenError('No stored file — cannot open this session.'); return; }
@@ -90,15 +116,56 @@ export default function TeamSessionDetailPage() {
   return (
     <div className="ts-detail-page">
       <div className="ts-detail-header">
-        <button className="btn btn-outline btn-sm" onClick={() => navigate(`/app/teams/${teamId}`)}>
+        <button className="btn btn-outline btn-sm" onClick={() => navigate('/app/sessions', { state: { viewMode: 'team' } })}>
           ← Back
         </button>
-        <div>
-          <h2 className="page-title" style={{ marginBottom: 2 }}>
-            {teamSession?.name || 'Team Session'}
-          </h2>
-          {sessionDate && <div className="text-dim" style={{ fontSize: 13 }}>{sessionDate}</div>}
-        </div>
+        {editing ? (
+          <form className="ts-edit-form" onSubmit={handleSaveEdit}>
+            {managerTeams.length > 1 && (
+              <select
+                className="filter-select"
+                value={editTeamId}
+                onChange={e => setEditTeamId(e.target.value)}
+                required
+              >
+                {managerTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            )}
+            <input
+              type="text"
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              required
+              autoFocus
+            />
+            <input
+              type="date"
+              value={editDate}
+              onChange={e => setEditDate(e.target.value)}
+              required
+            />
+            <div className="ts-edit-actions">
+              <button type="submit" className="btn btn-sm btn-accent" disabled={editSubmitting}>
+                {editSubmitting ? 'Saving…' : 'Save'}
+              </button>
+              <button type="button" className="btn btn-sm btn-outline" onClick={() => setEditing(false)}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+            <div>
+              <h2 className="page-title" style={{ marginBottom: 2 }}>
+                {teamSession?.name || 'Team Session'}
+              </h2>
+              {sessionDate && <div className="text-dim" style={{ fontSize: 13 }}>{sessionDate}</div>}
+            </div>
+            {isManager && (
+              <button className="btn btn-sm btn-outline" onClick={startEdit}>Edit</button>
+            )}
+          </div>
+        )}
       </div>
 
       {openError && (
@@ -112,17 +179,126 @@ export default function TeamSessionDetailPage() {
         <div className="empty-state">
           <div className="empty-state-title">No sessions linked yet</div>
           <p className="empty-state-desc">
-            {isCoach
+            {isManager
               ? 'Players can link their sessions to this team session from the Session History page.'
               : 'Link your session to this team session from the Session History page.'}
           </p>
         </div>
       ) : (
         <>
+          {/* Team aggregate metrics */}
+          {aggregate && (
+            <div className="ts-detail-section">
+              <h3 className="team-section-title">Team Overview</h3>
+              <div className="split-metrics">
+                <div className="split-metric">
+                  <span className="sm-label">Players</span><br />
+                  <span className="sm-value">{aggregate.playerCount}</span>
+                </div>
+                {aggregate.totalDist != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Total Distance</span><br />
+                    <span className="sm-value">{(aggregate.totalDist / 1000).toFixed(2)} km</span>
+                  </div>
+                )}
+                {aggregate.avgSpeed != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Avg Speed</span><br />
+                    <span className="sm-value">{(aggregate.avgSpeed / 3.6).toFixed(2)} m/s</span>
+                  </div>
+                )}
+                {aggregate.maxSpeedMs != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Max Speed</span><br />
+                    <span className="sm-value">{aggregate.maxSpeedMs.toFixed(2)} m/s</span>
+                  </div>
+                )}
+                {aggregate.avgMaxAccel != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Avg Max Accel</span><br />
+                    <span className="sm-value">{aggregate.avgMaxAccel.toFixed(1)} m/s²</span>
+                  </div>
+                )}
+                {aggregate.avgMaxDecel != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Avg Max Decel</span><br />
+                    <span className="sm-value">{aggregate.avgMaxDecel.toFixed(1)} m/s²</span>
+                  </div>
+                )}
+                {aggregate.totalHighSpeedDist != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Total Hi-Spd Dist</span><br />
+                    <span className="sm-value">{aggregate.totalHighSpeedDist.toFixed(0)} m</span>
+                  </div>
+                )}
+                {aggregate.totalSprintDist != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Total Sprint Dist</span><br />
+                    <span className="sm-value">{aggregate.totalSprintDist.toFixed(0)} m</span>
+                  </div>
+                )}
+                {aggregate.avgDuration != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Avg Duration</span><br />
+                    <span className="sm-value">{formatDuration(aggregate.avgDuration)}</span>
+                  </div>
+                )}
+                {aggregate.totalSprints != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Total Sprints</span><br />
+                    <span className="sm-value">{aggregate.totalSprints}</span>
+                  </div>
+                )}
+                {aggregate.totalImpacts != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Total Impacts</span><br />
+                    <span className="sm-value">{aggregate.totalImpacts}</span>
+                  </div>
+                )}
+                {aggregate.avgPlayerLoad != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Avg Player Load</span><br />
+                    <span className="sm-value">{aggregate.avgPlayerLoad.toFixed(0)} au</span>
+                  </div>
+                )}
+                {aggregate.avgPeakPower != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Avg Peak Power</span><br />
+                    <span className="sm-value">{aggregate.avgPeakPower.toFixed(0)} W</span>
+                  </div>
+                )}
+                {aggregate.avgAvgPower != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Avg Power</span><br />
+                    <span className="sm-value">{aggregate.avgAvgPower.toFixed(0)} W</span>
+                  </div>
+                )}
+                {aggregate.totalCal != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Total Calories</span><br />
+                    <span className="sm-value">{aggregate.totalCal.toFixed(0)} kcal</span>
+                  </div>
+                )}
+                {aggregate.totalWork != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Total Work</span><br />
+                    <span className="sm-value">{(aggregate.totalWork / 1000).toFixed(1)} kJ</span>
+                  </div>
+                )}
+                {aggregate.avgMetabolicPower != null && (
+                  <div className="split-metric">
+                    <span className="sm-label">Avg Metabolic Pwr</span><br />
+                    <span className="sm-value">{aggregate.avgMetabolicPower.toFixed(1)} W/kg</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Comparison table */}
           <div className="ts-detail-section">
             <h3 className="team-section-title">
-              {isCoach ? 'Player Comparison' : 'Your Session'}
+              {isManager ? 'Player Comparison' : 'Your Session'}
             </h3>
             <div className="ts-comparison-wrap">
               <table className="ts-comparison-table">
@@ -147,8 +323,7 @@ export default function TeamSessionDetailPage() {
                         key={s.id}
                         className={`ts-player-row${isOwnSession ? ' ts-player-row-own' : ''}${isExpanded ? ' ts-player-row-expanded' : ''}`}
                         onClick={() => setExpandedId(isExpanded ? null : s.id)}
-                        title={isOwnSession ? 'Click to expand · Double-click to open session' : 'Click to expand'}
-                        onDoubleClick={() => isOwnSession && !isOpening && openSession(s)}
+                        title="Click to expand"
                       >
                         <td className="ts-col-player">
                           <div className="ts-player-cell">
@@ -182,7 +357,7 @@ export default function TeamSessionDetailPage() {
               </table>
             </div>
             <p className="text-dim" style={{ fontSize: 12, marginTop: 8 }}>
-              Click a row to expand all metrics · Double-click your own row to open in dashboard
+              Click a row to expand all metrics · Click the expanded card to open your session
             </p>
           </div>
 
@@ -196,24 +371,21 @@ export default function TeamSessionDetailPage() {
             const isOpening = openingId === s.id;
             if (!m) return null;
             return (
-              <div className="ts-detail-section ts-expanded-panel">
+              <div
+                className={`ts-detail-section ts-expanded-panel${isOwnSession && s.file_path ? ' ts-expanded-panel-clickable' : ''}`}
+                onClick={() => isOwnSession && !isOpening && s.file_path && openSession(s)}
+                title={isOwnSession && s.file_path ? 'Click to open session' : undefined}
+              >
                 <div className="ts-expanded-header">
                   <span className="ts-expanded-title">
                     {s.playerProfile.display_name}
                     {isOwnSession && <span className="ts-you-badge" style={{ marginLeft: 8 }}>you</span>}
                   </span>
-                  <span className="text-dim" style={{ fontSize: 12 }}>Metrics from: {summary.source}</span>
-                  {isOwnSession && (
-                    <button
-                      className="btn btn-sm btn-accent"
-                      onClick={() => openSession(s)}
-                      disabled={isOpening || !s.file_path}
-                      title={!s.file_path ? 'No stored file' : undefined}
-                    >
-                      {isOpening ? 'Opening…' : 'Open Session'}
-                    </button>
-                  )}
-                  <button className="btn btn-sm btn-outline" onClick={() => setExpandedId(null)}>Close</button>
+                  <span className="text-dim" style={{ fontSize: 12 }}>
+                    Metrics from: {summary.source}
+                    {isOpening && <span style={{ marginLeft: 8 }}>Opening…</span>}
+                  </span>
+                  <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); setExpandedId(null); }}>Close</button>
                 </div>
                 <div className="split-metrics" style={{ marginTop: 12 }}>
                   <div className="split-metric"><span className="sm-label">Max Speed</span><br /><span className="sm-value">{(m.maxSpeedMs ?? m.maxSpeed / 3.6).toFixed(2)} m/s</span></div>

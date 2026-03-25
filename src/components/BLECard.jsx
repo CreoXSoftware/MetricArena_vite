@@ -3,9 +3,9 @@ import { bleManager } from '../utils/ble';
 import { formatBLEFilename, formatBytes } from '../utils/format';
 
 export default function BLECard({ onFileReady }) {
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState(() => bleManager.isConnected);
   const [connecting, setConnecting] = useState(false);
-  const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState(() => [...bleManager.availableFiles]);
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const [status, setStatus] = useState('');
   const [statusError, setStatusError] = useState(false);

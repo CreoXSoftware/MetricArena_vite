@@ -22,7 +22,7 @@ export function useTeams() {
     // First get memberships
     const { data: memberships, error: memErr } = await supabase
       .from('team_members')
-      .select('team_id, is_coach')
+      .select('team_id, is_manager')
       .eq('user_id', user.id);
 
 
@@ -37,14 +37,14 @@ export function useTeams() {
     const teamIds = memberships.map(m => m.team_id);
     const { data: teams, error: teamsErr } = await supabase
       .from('teams')
-      .select('id, name, sport, invite_code, created_at')
+      .select('id, name, sport, invite_code, created_at, avatar_url')
       .in('id', teamIds);
 
 
 
     if (teams) {
-      const coachMap = Object.fromEntries(memberships.map(m => [m.team_id, m.is_coach]));
-      setMyTeams(teams.map(t => ({ ...t, is_coach: coachMap[t.id] || false })));
+      const managerMap = Object.fromEntries(memberships.map(m => [m.team_id, m.is_manager]));
+      setMyTeams(teams.map(t => ({ ...t, is_manager: managerMap[t.id] || false })));
     }
     setLoading(false);
   }, [user]);
@@ -52,7 +52,7 @@ export function useTeams() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchTeams(); }, [fetchTeams]);
 
-  const createTeam = useCallback(async (name, sport) => {
+  const createTeam = useCallback(async (name, sport, isPlayer = true) => {
     if (!user) return { error: 'Not authenticated' };
     const invite_code = generateInviteCode();
     const { data: team, error } = await supabase
@@ -63,10 +63,10 @@ export function useTeams() {
 
     if (error) return { error: error.message };
 
-    // Add creator as coach
+    // Add creator as manager
     const { error: memberErr } = await supabase
       .from('team_members')
-      .insert({ team_id: team.id, user_id: user.id, is_coach: true });
+      .insert({ team_id: team.id, user_id: user.id, is_manager: true, is_player: isPlayer });
 
     if (memberErr) return { error: memberErr.message };
 
@@ -115,20 +115,20 @@ export function useTeams() {
       .eq('user_id', userId);
   }, []);
 
-  const transferCoach = useCallback(async (teamId, newCoachUserId) => {
+  const transferManager = useCallback(async (teamId, newManagerUserId) => {
     if (!user) return { error: 'Not authenticated' };
-    // Remove coach from self
+    // Remove manager from self
     await supabase
       .from('team_members')
-      .update({ is_coach: false })
+      .update({ is_manager: false })
       .eq('team_id', teamId)
       .eq('user_id', user.id);
-    // Set new coach
+    // Set new manager
     await supabase
       .from('team_members')
-      .update({ is_coach: true })
+      .update({ is_manager: true })
       .eq('team_id', teamId)
-      .eq('user_id', newCoachUserId);
+      .eq('user_id', newManagerUserId);
     await fetchTeams();
   }, [user, fetchTeams]);
 
@@ -145,17 +145,28 @@ export function useTeams() {
   const getTeamMembers = useCallback(async (teamId) => {
     const { data } = await supabase
       .from('team_members')
-      .select('user_id, is_coach, joined_at, profiles(id, display_name, avatar_url)')
+      .select('user_id, is_manager, is_player, joined_at, profiles(id, display_name, avatar_url)')
       .eq('team_id', teamId);
     return (data || []).map(m => ({
       ...m.profiles,
-      is_coach: m.is_coach,
+      is_manager: m.is_manager,
+      is_player: m.is_player,
       joined_at: m.joined_at,
     }));
   }, []);
 
+  const updateTeamAvatar = useCallback(async (teamId, url) => {
+    const { error } = await supabase
+      .from('teams')
+      .update({ avatar_url: url })
+      .eq('id', teamId);
+    if (error) { console.error('Team avatar update error:', error.message); return; }
+    await fetchTeams();
+  }, [fetchTeams]);
+
   return {
     myTeams, loading, createTeam, joinTeam, leaveTeam,
-    removeMember, transferCoach, searchUsers, getTeamMembers, refreshTeams: fetchTeams,
+    removeMember, transferManager, searchUsers, getTeamMembers,
+    refreshTeams: fetchTeams, updateTeamAvatar,
   };
 }

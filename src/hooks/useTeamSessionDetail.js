@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Fetches all sessions linked to a team session, enriched with player profiles.
- * Coaches see all players' sessions (requires the "Coaches can view team member sessions" RLS policy).
+ * Managers see all players' sessions (requires the "Coaches can view team member sessions" RLS policy).
  * Players only see their own.
  */
 export function useTeamSessionDetail(teamSessionId) {

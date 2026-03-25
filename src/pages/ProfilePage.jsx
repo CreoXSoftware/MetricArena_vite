@@ -4,6 +4,7 @@ import { useSession } from '../contexts/SessionContext';
 import { supabase } from '../lib/supabase';
 import { SPORTS } from '../utils/constants';
 import ThresholdsPanel from '../components/ThresholdsPanel';
+import ImageCropModal from '../components/ImageCropModal';
 
 export default function ProfilePage() {
   const { user, profile: authProfile, signOut, refreshProfile } = useAuth();
@@ -25,6 +26,7 @@ export default function ProfilePage() {
   const pendingThresholdsRef = useRef(null);
 
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [cropFile, setCropFile] = useState(null);
   const fileInputRef = useRef(null);
 
   const avatarUrl = authProfile?.avatar_url || null;
@@ -42,15 +44,22 @@ export default function ProfilePage() {
     setTimeout(() => setAccountSaved(false), 2000);
   }, [user, displayName, refreshProfile]);
 
-  const handleAvatarUpload = useCallback(async (e) => {
+  const handleFileSelect = useCallback((e) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
+    e.target.value = '';
+    setCropFile(file);
+  }, []);
+
+  const handleCropConfirm = useCallback(async (blob) => {
+    setCropFile(null);
+    if (!user) return;
     setAvatarUploading(true);
-    const ext = file.name.split('.').pop();
+    const ext = blob.type === 'image/jpeg' ? 'jpg' : 'png';
     const path = `${user.id}/avatar.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(path, file, { upsert: true });
+      .upload(path, blob, { upsert: true, contentType: blob.type });
     if (uploadError) { console.error('Avatar upload error:', uploadError.message); setAvatarUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
     const url = `${publicUrl}?t=${Date.now()}`;
@@ -105,7 +114,7 @@ export default function ProfilePage() {
             <div className="profile-avatar-overlay">
               {avatarUploading ? 'Uploading…' : 'Change'}
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} style={{ display: 'none' }} />
           </div>
           <div className="profile-account-fields">
             <label className="auth-label">
@@ -188,6 +197,14 @@ export default function ProfilePage() {
           applyLabel={threshSaving ? 'Saving…' : threshSaved ? 'Saved!' : 'Save'}
         />
       </div>
+
+      {cropFile && (
+        <ImageCropModal
+          file={cropFile}
+          onConfirm={handleCropConfirm}
+          onCancel={() => setCropFile(null)}
+        />
+      )}
 
       {/* Danger Zone */}
       <div className="profile-section profile-danger-zone">

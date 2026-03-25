@@ -1746,6 +1746,23 @@ body {
 .teams-inline-form input:focus,
 .teams-inline-form select:focus { border-color: var(--accent); }
 
+.teams-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+
+.teams-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .teams-list {
   display: flex;
   flex-direction: column;
@@ -1780,7 +1797,7 @@ body {
   margin-top: 4px;
 }
 
-.coach-badge {
+.manager-badge {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -2133,7 +2150,7 @@ body {
   padding: 8px 0;
 }
 
-/* User search (coach transfer) */
+/* User search (manager transfer) */
 .user-search {
   display: flex;
   flex-direction: column;
@@ -2184,6 +2201,136 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.sessions-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sessions-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sessions-mode-toggle {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.sessions-mode-btn {
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sessions-mode-btn.active {
+  background: var(--accent);
+  color: #000;
+}
+
+.sessions-mode-btn:not(.active):hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.sessions-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sessions-add-row {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
+.sessions-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sessions-add-btn span {
+  display: block;
+  margin-top: -1px;
+  transition: transform 0.2s;
+}
+
+.sessions-add-btn:hover {
+  background: var(--surface2);
+  border-color: var(--accent);
+}
+
+.sessions-add-btn-active span {
+  transform: rotate(45deg);
+}
+
+.filter-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.filter-select:focus { border-color: var(--accent); }
+
+.filter-date {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s;
+  color-scheme: dark;
+}
+
+.filter-date:focus { border-color: var(--accent); }
+
+.filter-date-sep {
+  color: var(--text-dim);
+  font-size: 14px;
+  user-select: none;
+}
+
+.filter-clear {
+  margin-left: 4px;
 }
 
 .sessions-list {
@@ -2245,6 +2392,34 @@ body {
   font-weight: 500;
 }
 
+.session-card-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.team-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(0, 229, 160, 0.12);
+  border: 1px solid rgba(0, 229, 160, 0.3);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+.team-chip:hover {
+  background: rgba(0, 229, 160, 0.22);
+}
+
 .session-card-type {
   font-size: 11px;
   text-transform: uppercase;
@@ -2263,14 +2438,52 @@ body {
 }
 
 .session-card-metric {
-  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.session-card-metric-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--text-dim);
 }
 
 .session-card-metric-value {
   font-weight: 600;
-  color: var(--text);
+  color: var(--accent);
   font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+}
+
+.session-card-metric-unit {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.session-source-badge {
+  display: inline-block;
+  font-size: 10px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 7px;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+}
+
+.session-source-combined {
+  color: var(--accent2, #00b8ff);
+  background: rgba(0, 184, 255, 0.1);
+  border: 1px solid rgba(0, 184, 255, 0.25);
+}
+
+.session-source-full {
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
 }
 
 .session-card-footer {
@@ -2300,6 +2513,107 @@ body {
   font-family: inherit;
   font-size: 12px;
   outline: none;
+}
+
+.session-link-dropdown {
+  position: relative;
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  min-width: 220px;
+  outline: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  z-index: 10;
+}
+
+.session-link-option {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.session-link-option:last-child { border-bottom: none; }
+.session-link-option:hover { background: var(--surface3, rgba(255,255,255,0.06)); }
+
+.session-link-option-team {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.session-link-option-name { font-size: 13px; }
+
+.session-link-option-empty {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.session-link-option-create {
+  color: var(--accent);
+  font-size: 12px;
+  padding: 9px 12px;
+}
+
+.ts-edit-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+}
+
+.ts-edit-form input,
+.ts-edit-form select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.ts-edit-form input:focus,
+.ts-edit-form select:focus { border-color: var(--accent); }
+
+.ts-edit-form input[type="text"] { flex: 1; min-width: 140px; }
+
+.ts-edit-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.load-more-btn {
+  display: block;
+  margin: 16px auto 0;
+  min-width: 140px;
+}
+
+.session-link-pending-note {
+  font-size: 12px;
+  color: var(--accent);
+  padding: 6px 10px;
+  background: rgba(0, 229, 160, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 229, 160, 0.2);
 }
 
 .btn-link {
@@ -2406,4 +2720,154 @@ body {
   .navbar-displayname { display: none; }
   .navbar-role-badge { display: none; }
   .navbar-sport-select { display: none; }
+}
+
+/* ============================================================
+   IMAGE CROP MODAL
+   ============================================================ */
+.crop-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.crop-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.crop-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  align-self: flex-start;
+  margin: 0;
+}
+
+.crop-canvas-wrapper {
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--accent);
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.crop-canvas-wrapper:active { cursor: grabbing; }
+
+.crop-canvas {
+  display: block;
+  width: 300px;
+  height: 300px;
+}
+
+.crop-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+  margin: 0;
+}
+
+.crop-zoom-slider {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.crop-modal-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.crop-modal-actions .btn {
+  flex: 1;
+}
+
+/* ============================================================
+   TEAM AVATAR — Detail page
+   ============================================================ */
+.team-header-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.team-avatar-wrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.team-avatar-clickable {
+  cursor: pointer;
+}
+
+.team-avatar-clickable:hover .profile-avatar-overlay {
+  opacity: 1;
+}
+
+.team-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.team-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* ============================================================
+   TEAM AVATAR — Team cards (TeamsPage)
+   ============================================================ */
+.team-card-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.team-card-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  flex-shrink: 0;
 }

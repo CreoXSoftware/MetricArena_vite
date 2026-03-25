@@ -30,8 +30,8 @@ export default function App() {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="teams" element={<TeamsPage />} />
           <Route path="teams/:teamId" element={<TeamDetailPage />} />
-          <Route path="teams/:teamId/sessions/:teamSessionId" element={<TeamSessionDetailPage />} />
           <Route path="sessions" element={<SessionHistoryPage />} />
+          <Route path="sessions/team/:teamSessionId" element={<TeamSessionDetailPage />} />
         </Route>
       </Route>
 
