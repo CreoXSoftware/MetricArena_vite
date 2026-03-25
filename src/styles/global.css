@@ -1890,6 +1890,35 @@ body {
   margin-bottom: 14px;
 }
 
+.team-danger-zone {
+  border-color: rgba(255, 80, 80, 0.3);
+}
+
+.team-danger-zone .team-section-title {
+  color: var(--text-dim);
+}
+
+.delete-confirm-box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.delete-confirm-message {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.delete-confirm-message strong {
+  color: var(--text);
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .team-section-header .team-section-title { margin-bottom: 0; }
 
 .team-members-list {

@@ -10,7 +10,7 @@ export default function TeamDetailPage() {
   const { teamId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { myTeams, loading: teamsLoading, leaveTeam, removeMember, transferManager, searchUsers, getTeamMembers, updateTeamAvatar } = useTeams();
+  const { myTeams, loading: teamsLoading, leaveTeam, removeMember, transferManager, searchUsers, getTeamMembers, updateTeamAvatar, deleteTeam } = useTeams();
 
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
@@ -27,6 +27,10 @@ export default function TeamDetailPage() {
 
   // Clipboard
   const [copied, setCopied] = useState(false);
+
+  // Delete team
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const team = myTeams.find(t => t.id === teamId);
   const isManager = team?.is_manager || false;
@@ -84,6 +88,18 @@ export default function TeamDetailPage() {
   const handleLeave = async () => {
     await leaveTeam(teamId);
     navigate('/app/teams');
+  };
+
+  const handleDeleteTeam = async () => {
+    setDeleting(true);
+    const result = await deleteTeam(teamId);
+    if (result?.error) {
+      console.error('Delete team error:', result.error);
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    } else {
+      navigate('/app/teams');
+    }
   };
 
   if (teamsLoading) {
@@ -231,6 +247,31 @@ export default function TeamDetailPage() {
           </button>
         )}
       </div>
+
+      {isManager && (
+        <div className="team-section team-danger-zone">
+          <h3 className="team-section-title">Danger Zone</h3>
+          {!showDeleteConfirm ? (
+            <button className="btn btn-sm btn-outline btn-danger" onClick={() => setShowDeleteConfirm(true)}>
+              Delete Team
+            </button>
+          ) : (
+            <div className="delete-confirm-box">
+              <p className="delete-confirm-message">
+                Are you sure you want to delete <strong>{team.name}</strong>? This will remove all team sessions and members. Individual player sessions will be kept but unlinked.
+              </p>
+              <div className="delete-confirm-actions">
+                <button className="btn btn-sm btn-outline btn-danger" onClick={handleDeleteTeam} disabled={deleting}>
+                  {deleting ? 'Deleting…' : 'Yes, delete team'}
+                </button>
+                <button className="btn btn-sm btn-outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
     </div>
   );

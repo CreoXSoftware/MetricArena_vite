@@ -155,6 +155,48 @@ export function useTeams() {
     }));
   }, []);
 
+  const deleteTeam = useCallback(async (teamId) => {
+    if (!user) return { error: 'Not authenticated' };
+
+    // 1. Find all team_sessions for this team
+    const { data: teamSessions } = await supabase
+      .from('team_sessions')
+      .select('id')
+      .eq('team_id', teamId);
+
+    if (teamSessions?.length) {
+      const tsIds = teamSessions.map(ts => ts.id);
+
+      // 2. Unlink individual sessions (keep them, just detach from team event)
+      await supabase
+        .from('sessions')
+        .update({ team_session_id: null })
+        .in('team_session_id', tsIds);
+
+      // 3. Delete team_sessions
+      await supabase
+        .from('team_sessions')
+        .delete()
+        .eq('team_id', teamId);
+    }
+
+    // 4. Delete all team_members
+    await supabase
+      .from('team_members')
+      .delete()
+      .eq('team_id', teamId);
+
+    // 5. Delete the team itself
+    const { error } = await supabase
+      .from('teams')
+      .delete()
+      .eq('id', teamId);
+
+    if (error) return { error: error.message };
+    await fetchTeams();
+    return { data: true };
+  }, [user, fetchTeams]);
+
   const updateTeamAvatar = useCallback(async (teamId, url) => {
     const { error } = await supabase
       .from('teams')
@@ -167,6 +209,6 @@ export function useTeams() {
   return {
     myTeams, loading, createTeam, joinTeam, leaveTeam,
     removeMember, transferManager, searchUsers, getTeamMembers,
-    refreshTeams: fetchTeams, updateTeamAvatar,
+    refreshTeams: fetchTeams, updateTeamAvatar, deleteTeam,
   };
 }
