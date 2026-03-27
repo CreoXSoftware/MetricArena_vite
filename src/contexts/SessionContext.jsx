@@ -16,8 +16,12 @@ const DEFAULT_PROFILE = {
   age: 25,
   maxHR: 195,
   sex: 'male',
+  mySports: [],
   sport: 'general',
   vo2max: 0,
+  positionsBySport: {},
+  province: '',
+  country: '',
 };
 
 // localStorage cache for fast initial render / offline fallback

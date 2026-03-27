@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSession } from '../contexts/SessionContext';
 import { supabase } from '../lib/supabase';
-import { SPORTS } from '../utils/constants';
+import { SPORTS, COUNTRIES, POSITIONS_BY_SPORT } from '../utils/constants';
 import ThresholdsPanel from '../components/ThresholdsPanel';
 import ImageCropModal from '../components/ImageCropModal';
 
@@ -16,6 +16,7 @@ export default function ProfilePage() {
 
   // Local form state for athlete profile — only sent to DB on Save
   const [athleteForm, setAthleteForm] = useState({ ...athleteProfile });
+  const [positionSport, setPositionSport] = useState('');
   const [athleteSaving, setAthleteSaving] = useState(false);
   const [athleteSaved, setAthleteSaved] = useState(false);
   const [athleteError, setAthleteError] = useState(null);
@@ -166,18 +167,111 @@ export default function ProfilePage() {
               <option value="female">Female</option>
             </select>
           </div>
-          <div className="field">
-            <label>Default Sport</label>
-            <select value={athleteForm.sport} onChange={e => handleAthleteFormChange('sport', e.target.value)}>
-              {SPORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-          </div>
           <div className="field wide">
             <label>VO₂ Max (ml/kg/min) — optional</label>
             <input type="number" value={athleteForm.vo2max || ''} placeholder="e.g. 50" min="20" max="90" step="0.5"
               onChange={e => handleAthleteFormChange('vo2max', parseFloat(e.target.value) || 0)} />
           </div>
+          <div className="field wide">
+            <label>Sports I Compete In</label>
+            <div className="position-multi-select">
+              {SPORTS.filter(s => s.value !== 'general').map(s => {
+                const selected = (athleteForm.mySports || []).includes(s.value);
+                return (
+                  <button key={s.value} type="button"
+                    className={`position-chip${selected ? ' selected' : ''}`}
+                    onClick={() => {
+                      const current = athleteForm.mySports || [];
+                      const next = selected ? current.filter(v => v !== s.value) : [...current, s.value];
+                      handleAthleteFormChange('mySports', next);
+                      // If default sport was removed, reset it
+                      if (selected && athleteForm.sport === s.value) {
+                        handleAthleteFormChange('sport', next[0] || 'general');
+                      }
+                    }}
+                  >{s.label}</button>
+                );
+              })}
+            </div>
+          </div>
+          {(athleteForm.mySports || []).length > 0 && (
+            <div className="field wide">
+              <label>Default Sport</label>
+              <p className="profile-section-hint" style={{ margin: '0 0 4px' }}>Sets the navbar sport filter when you log in.</p>
+              <select value={athleteForm.sport} onChange={e => handleAthleteFormChange('sport', e.target.value)}>
+                {(athleteForm.mySports || []).map(sv => {
+                  const s = SPORTS.find(sp => sp.value === sv);
+                  return s ? <option key={s.value} value={s.value}>{s.label}</option> : null;
+                })}
+              </select>
+            </div>
+          )}
         </div>
+
+        {/* Positions — per-sport multi-select */}
+        {(() => {
+          const sportsWithPositions = (athleteForm.mySports || []).filter(sv => (POSITIONS_BY_SPORT[sv] || []).length > 0);
+          if (sportsWithPositions.length === 0) return null;
+          const activeSportKey = sportsWithPositions.includes(positionSport) ? positionSport : sportsWithPositions[0];
+          const positions = POSITIONS_BY_SPORT[activeSportKey] || [];
+          const pbs = athleteForm.positionsBySport || {};
+          const selected = pbs[activeSportKey] || [];
+          return (
+            <div className="profile-positions-section">
+              <div className="profile-positions-header">
+                <label>Position(s)</label>
+                {sportsWithPositions.length > 1 && (
+                  <select className="filter-select" value={activeSportKey} onChange={e => setPositionSport(e.target.value)}>
+                    {sportsWithPositions.map(sv => {
+                      const s = SPORTS.find(sp => sp.value === sv);
+                      return <option key={sv} value={sv}>{s?.label || sv}</option>;
+                    })}
+                  </select>
+                )}
+              </div>
+              <div className="position-multi-select">
+                {positions.map(pos => {
+                  const isSelected = selected.includes(pos);
+                  return (
+                    <button key={pos} type="button"
+                      className={`position-chip${isSelected ? ' selected' : ''}`}
+                      onClick={() => {
+                        const next = isSelected ? selected.filter(p => p !== pos) : [...selected, pos];
+                        handleAthleteFormChange('positionsBySport', { ...pbs, [activeSportKey]: next });
+                      }}
+                    >{pos}</button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
+        <div className="profile-grid" style={{ marginTop: '12px' }}>
+          <div className="field">
+            <label>Country</label>
+            <select value={athleteForm.country || ''} onChange={e => { handleAthleteFormChange('country', e.target.value); handleAthleteFormChange('province', ''); }}>
+              <option value="">Not set</option>
+              {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label>Province / State</label>
+            {(() => {
+              const cDef = COUNTRIES.find(c => c.value === athleteForm.country);
+              return cDef?.provinces?.length > 0 ? (
+                <select value={athleteForm.province || ''} onChange={e => handleAthleteFormChange('province', e.target.value)}>
+                  <option value="">Not set</option>
+                  {cDef.provinces.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              ) : (
+                <input type="text" value={athleteForm.province || ''} placeholder="Province / State"
+                  onChange={e => handleAthleteFormChange('province', e.target.value)} />
+              );
+            })()}
+          </div>
+        </div>
+
         {athleteError && <div className="profile-hint" style={{ color: 'var(--error)' }}>{athleteError}</div>}
         <div className="profile-account-actions" style={{ marginTop: '12px' }}>
           <button className="btn btn-accent" onClick={handleSaveAthleteProfile} disabled={athleteSaving}>

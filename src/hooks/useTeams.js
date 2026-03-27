@@ -37,7 +37,7 @@ export function useTeams() {
     const teamIds = memberships.map(m => m.team_id);
     const { data: teams, error: teamsErr } = await supabase
       .from('teams')
-      .select('id, name, sport, invite_code, created_at, avatar_url')
+      .select('id, name, sport, invite_code, created_at, avatar_url, province, country')
       .in('id', teamIds);
 
 
@@ -197,6 +197,16 @@ export function useTeams() {
     return { data: true };
   }, [user, fetchTeams]);
 
+  const updateTeam = useCallback(async (teamId, fields) => {
+    const { error } = await supabase
+      .from('teams')
+      .update(fields)
+      .eq('id', teamId);
+    if (error) return { error: error.message };
+    await fetchTeams();
+    return { data: true };
+  }, [fetchTeams]);
+
   const updateTeamAvatar = useCallback(async (teamId, url) => {
     const { error } = await supabase
       .from('teams')
@@ -209,6 +219,6 @@ export function useTeams() {
   return {
     myTeams, loading, createTeam, joinTeam, leaveTeam,
     removeMember, transferManager, searchUsers, getTeamMembers,
-    refreshTeams: fetchTeams, updateTeamAvatar, deleteTeam,
+    refreshTeams: fetchTeams, updateTeam, updateTeamAvatar, deleteTeam,
   };
 }

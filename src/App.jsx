@@ -12,6 +12,7 @@ import TeamsPage from './pages/TeamsPage';
 import TeamDetailPage from './pages/TeamDetailPage';
 import TeamSessionDetailPage from './pages/TeamSessionDetailPage';
 import SessionHistoryPage from './pages/SessionHistoryPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 
 export default function App() {
   return (
@@ -24,7 +25,7 @@ export default function App() {
       {/* Protected routes with navbar layout */}
       <Route path="/app" element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route index element={<Navigate to="sessions" replace />} />
+          <Route index element={<Navigate to="leaderboard" replace />} />
           <Route path="upload" element={<UploadPage />} />
           <Route path="dashboard" element={<SessionDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="teams/:teamId" element={<TeamDetailPage />} />
           <Route path="sessions" element={<SessionHistoryPage />} />
           <Route path="sessions/team/:teamSessionId" element={<TeamSessionDetailPage />} />
+          <Route path="leaderboard" element={<LeaderboardPage />} />
         </Route>
       </Route>
 

@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   if (loading) return null;
-  if (user) return <Navigate to="/app/upload" replace />;
+  if (user) return <Navigate to="/app/leaderboard" replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +23,7 @@ export default function LoginPage() {
     if (err) {
       setError(err.message);
     } else {
-      navigate('/app/upload');
+      navigate('/app/leaderboard');
     }
   };
 

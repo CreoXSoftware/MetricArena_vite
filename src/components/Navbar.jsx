@@ -26,14 +26,14 @@ export default function Navbar() {
       </NavLink>
 
       <div className="navbar-links">
+        <NavLink to="/app/leaderboard" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+          Leaderboard
+        </NavLink>
         <NavLink to="/app/sessions" className={({ isActive }) => `nav-link ${isActive || sessionsDashboard ? 'active' : ''}`}>
           Sessions
         </NavLink>
         <NavLink to="/app/teams" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
           Teams
-        </NavLink>
-        <NavLink to="/leaderboard" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          Leaderboard
         </NavLink>
       </div>
 
@@ -43,9 +43,15 @@ export default function Navbar() {
         onChange={(e) => setActiveSport(e.target.value)}
       >
         <option value="all">All Sports</option>
-        {SPORTS.map(s => (
-          <option key={s.value} value={s.value}>{s.label}</option>
-        ))}
+        {(() => {
+          const mySports = profile?.athlete_profile?.mySports;
+          const list = mySports?.length > 0
+            ? SPORTS.filter(s => mySports.includes(s.value))
+            : SPORTS;
+          return list.map(s => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ));
+        })()}
       </select>
 
       <div className="navbar-user">

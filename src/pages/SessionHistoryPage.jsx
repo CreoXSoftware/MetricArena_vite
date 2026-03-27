@@ -30,7 +30,7 @@ export default function SessionHistoryPage() {
 
   const [viewMode, setViewMode] = useState(location.state?.viewMode || 'individual');
   const [filterType, setFilterType] = useState('all');
-  const [filterTeam, setFilterTeam] = useState('all');
+  const [filterTeam, setFilterTeam] = useState(location.state?.filterTeam || 'all');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
 

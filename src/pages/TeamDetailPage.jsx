@@ -3,14 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTeams } from '../hooks/useTeams';
 import { supabase } from '../lib/supabase';
-import { SPORTS } from '../utils/constants';
+import { SPORTS, COUNTRIES } from '../utils/constants';
 import ImageCropModal from '../components/ImageCropModal';
 
 export default function TeamDetailPage() {
   const { teamId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { myTeams, loading: teamsLoading, leaveTeam, removeMember, transferManager, searchUsers, getTeamMembers, updateTeamAvatar, deleteTeam } = useTeams();
+  const { myTeams, loading: teamsLoading, leaveTeam, removeMember, transferManager, searchUsers, getTeamMembers, updateTeam, updateTeamAvatar, deleteTeam } = useTeams();
 
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
@@ -32,7 +32,26 @@ export default function TeamDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Location fields
+  const [editingLocation, setEditingLocation] = useState(false);
+  const [locationSaving, setLocationSaving] = useState(false);
+
   const team = myTeams.find(t => t.id === teamId);
+
+  const [teamCountry, setTeamCountry] = useState(team?.country || '');
+  const [teamProvince, setTeamProvince] = useState(team?.province || '');
+
+  const selectedCountryDef = COUNTRIES.find(c => c.value === teamCountry);
+
+  const handleSaveLocation = async () => {
+    setLocationSaving(true);
+    await updateTeam(teamId, {
+      province: teamProvince.trim() || null,
+      country: teamCountry.trim() || null,
+    });
+    setLocationSaving(false);
+    setEditingLocation(false);
+  };
   const isManager = team?.is_manager || false;
 
   const fetchMembers = useCallback(async () => {
@@ -159,6 +178,20 @@ export default function TeamDetailPage() {
             <h2 className="page-title">{team.name}</h2>
             <div className="team-detail-sport">
               {SPORTS.find(s => s.value === team.sport)?.label || team.sport}
+              {(team.province || team.country) && (
+                <span className="team-detail-location">
+                  {' · '}{[team.province, team.country].filter(Boolean).join(', ')}
+                </span>
+              )}
+              {isManager && (
+                <button
+                  className="team-location-edit-btn"
+                  onClick={() => setEditingLocation(v => !v)}
+                  title="Edit location"
+                >
+                  {editingLocation ? '✕' : '✎'}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -172,6 +205,24 @@ export default function TeamDetailPage() {
         </div>
       </div>
 
+      {editingLocation && isManager && (
+        <div className="team-location-form">
+          <select className="filter-select" value={teamCountry} onChange={e => { setTeamCountry(e.target.value); setTeamProvince(''); }}>
+            <option value="">Select country…</option>
+            {COUNTRIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+          {selectedCountryDef?.provinces?.length > 0 && (
+            <select className="filter-select" value={teamProvince} onChange={e => setTeamProvince(e.target.value)}>
+              <option value="">Select province…</option>
+              {selectedCountryDef.provinces.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          )}
+          <button className="btn btn-accent btn-sm" onClick={handleSaveLocation} disabled={locationSaving}>
+            {locationSaving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      )}
+
       {teamCropFile && (
         <ImageCropModal
           file={teamCropFile}
@@ -179,6 +230,13 @@ export default function TeamDetailPage() {
           onCancel={() => setTeamCropFile(null)}
         />
       )}
+
+      <button
+        className="team-sessions-btn"
+        onClick={() => navigate('/app/sessions', { state: { viewMode: 'team', filterTeam: teamId } })}
+      >
+        View Team Sessions →
+      </button>
 
       {/* Members */}
       <div className="team-section">
