@@ -38,11 +38,12 @@ export default function TeamSessionDetailPage() {
   const { user } = useAuth();
   const { myTeams } = useTeams();
   const { myAvailableTeamSessions, updateTeamSession } = useTeamSessions();
-  const { playerSessions, loading } = useTeamSessionDetail(teamSessionId);
+  const { playerSessions, loading, refresh } = useTeamSessionDetail(teamSessionId);
   const { loadSessionFromHistory } = useSession();
 
   const [openingId, setOpeningId] = useState(null);
   const [openError, setOpenError] = useState(null);
+  const [unlinkingId, setUnlinkingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -96,6 +97,15 @@ export default function TeamSessionDetailPage() {
       setOpenError(err.message);
       setOpeningId(null);
     }
+  };
+
+  const unlinkSession = async (sessionId, e) => {
+    e.stopPropagation();
+    setUnlinkingId(sessionId);
+    await supabase.from('sessions').update({ team_session_id: null }).eq('id', sessionId);
+    setExpandedId(null);
+    setUnlinkingId(null);
+    refresh();
   };
 
   if (loading) {
@@ -385,7 +395,18 @@ export default function TeamSessionDetailPage() {
                     Metrics from: {summary.source}
                     {isOpening && <span style={{ marginLeft: 8 }}>Opening…</span>}
                   </span>
-                  <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); setExpandedId(null); }}>Close</button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {(isManager || isOwnSession) && (
+                      <button
+                        className="btn btn-sm btn-outline btn-danger"
+                        onClick={(e) => unlinkSession(s.id, e)}
+                        disabled={unlinkingId === s.id}
+                      >
+                        {unlinkingId === s.id ? 'Unlinking…' : 'Unlink'}
+                      </button>
+                    )}
+                    <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); setExpandedId(null); }}>Close</button>
+                  </div>
                 </div>
                 <div className="split-metrics" style={{ marginTop: 12 }}>
                   <div className="split-metric"><span className="sm-label">Max Speed</span><br /><span className="sm-value">{(m.maxSpeedMs ?? m.maxSpeed / 3.6).toFixed(2)} m/s</span></div>

@@ -7,7 +7,10 @@
       "Bash(npm run:*)",
       "Bash(npx vite:*)",
       "Bash(npx eslint:*)",
-      "Bash(grep -r \"role\\\\|visibility\\\\|team\\\\|coach\" c:/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena/src --include=*.jsx --include=*.js)"
+      "Bash(grep -r \"role\\\\|visibility\\\\|team\\\\|coach\" c:/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena/src --include=*.jsx --include=*.js)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena/src -type f -name *logo* -o -name *brand* -o -name *favicon*)"
     ]
   }
 }

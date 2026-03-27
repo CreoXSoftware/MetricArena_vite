@@ -2572,8 +2572,8 @@ body {
   font-weight: 500;
   padding: 3px 10px;
   border-radius: 8px;
-  color: var(--accent2);
-  background: rgba(0,184,255,0.1);
+  color: var(--text-dim);
+  background: var(--surface2);
 }
 
 .session-card-metrics {

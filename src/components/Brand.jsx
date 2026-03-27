@@ -7,28 +7,33 @@ export function LogoSVG({ size = 72 }) {
       <polygon points="50,5 91,28 91,72 50,95 9,72 9,28"
         fill="url(#hexGlow)" className="hex-pulse" />
       <polygon points="50,5 91,28 91,72 50,95 9,72 9,28"
-        fill="none" stroke="url(#gradStroke)" strokeWidth="3"
+        fill="none" stroke="url(#gradStroke)" strokeWidth="2.5"
         strokeLinejoin="round" className="logo-ring" />
-      <line x1="28" y1="58" x2="52" y2="58" stroke="#00e5a0" strokeWidth="3" strokeLinecap="round" opacity="0.9" />
-      <line x1="32" y1="50" x2="68" y2="50" stroke="#00b8ff" strokeWidth="3.5" strokeLinecap="round">
-        <animate attributeName="x2" values="68;72;68" dur="3s" repeatCount="indefinite" />
-      </line>
-      <line x1="28" y1="42" x2="48" y2="42" stroke="#00e5a0" strokeWidth="2.5" strokeLinecap="round" opacity="0.7" />
-      <polygon points="70,50 60,42 60,58" fill="url(#gradFill)" opacity="0.9">
-        <animate attributeName="opacity" values="0.9;1;0.9" dur="2s" repeatCount="indefinite" />
-        <animateTransform attributeName="transform" type="translate" values="0,0;4,0;0,0" dur="2.2s" repeatCount="indefinite" />
+      {/* Ascending metric bars */}
+      <rect x="26" y="58" width="8" height="14" rx="2" fill="#ff8c00" opacity="0.85">
+        <animate attributeName="opacity" values="0.85;1;0.85" dur="3s" begin="0s" repeatCount="indefinite" />
+      </rect>
+      <rect x="38" y="48" width="8" height="24" rx="2" fill="#ffb800" opacity="0.9">
+        <animate attributeName="opacity" values="0.9;1;0.9" dur="3s" begin="0.3s" repeatCount="indefinite" />
+      </rect>
+      <rect x="50" y="38" width="8" height="34" rx="2" fill="#00e5a0" opacity="0.9">
+        <animate attributeName="opacity" values="0.9;1;0.9" dur="3s" begin="0.6s" repeatCount="indefinite" />
+      </rect>
+      <rect x="62" y="28" width="8" height="44" rx="2" fill="#00b8ff" opacity="0.95">
+        <animate attributeName="opacity" values="0.95;1;0.95" dur="3s" begin="0.9s" repeatCount="indefinite" />
+      </rect>
+      {/* Peak indicator arrow */}
+      <polygon points="66,22 62,28 70,28" fill="#00b8ff" opacity="0.9">
+        <animate attributeName="opacity" values="0.9;1;0.7;0.9" dur="2.5s" repeatCount="indefinite" />
       </polygon>
       <defs>
         <linearGradient id="gradStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00e5a0" />
-          <stop offset="100%" stopColor="#00b8ff" />
-        </linearGradient>
-        <linearGradient id="gradFill" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#00e5a0" />
+          <stop offset="0%" stopColor="#ff8c00" />
+          <stop offset="50%" stopColor="#00e5a0" />
           <stop offset="100%" stopColor="#00b8ff" />
         </linearGradient>
         <radialGradient id="hexGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#00e5a0" stopOpacity="0.12" />
+          <stop offset="0%" stopColor="#ffb800" stopOpacity="0.1" />
           <stop offset="100%" stopColor="#00e5a0" stopOpacity="0" />
         </radialGradient>
       </defs>
@@ -42,17 +47,16 @@ export function LogoSmallSVG({ size = 32 }) {
       style={{ filter: 'drop-shadow(0 0 8px rgba(0, 229, 160, 0.25))' }}>
       <polygon points="50,5 91,28 91,72 50,95 9,72 9,28"
         fill="none" stroke="url(#gs2)" strokeWidth="3" strokeLinejoin="round" />
-      <line x1="28" y1="58" x2="52" y2="58" stroke="#00e5a0" strokeWidth="3" strokeLinecap="round" opacity="0.9" />
-      <line x1="32" y1="50" x2="68" y2="50" stroke="#00b8ff" strokeWidth="3.5" strokeLinecap="round" />
-      <line x1="28" y1="42" x2="48" y2="42" stroke="#00e5a0" strokeWidth="2.5" strokeLinecap="round" opacity="0.7" />
-      <polygon points="70,50 60,42 60,58" fill="url(#gf2)" opacity="0.9" />
+      {/* Ascending metric bars - static for small version */}
+      <rect x="26" y="58" width="8" height="14" rx="2" fill="#ff8c00" opacity="0.85" />
+      <rect x="38" y="48" width="8" height="24" rx="2" fill="#ffb800" opacity="0.9" />
+      <rect x="50" y="38" width="8" height="34" rx="2" fill="#00e5a0" opacity="0.9" />
+      <rect x="62" y="28" width="8" height="44" rx="2" fill="#00b8ff" opacity="0.95" />
+      <polygon points="66,22 62,28 70,28" fill="#00b8ff" opacity="0.9" />
       <defs>
         <linearGradient id="gs2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00e5a0" />
-          <stop offset="100%" stopColor="#00b8ff" />
-        </linearGradient>
-        <linearGradient id="gf2" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#00e5a0" />
+          <stop offset="0%" stopColor="#ff8c00" />
+          <stop offset="50%" stopColor="#00e5a0" />
           <stop offset="100%" stopColor="#00b8ff" />
         </linearGradient>
       </defs>

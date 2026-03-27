@@ -7,7 +7,7 @@ import { useTeams } from '../hooks/useTeams';
 import { useSession } from '../contexts/SessionContext';
 import TeamSessionTag from '../components/TeamSessionTag';
 import { formatDuration } from '../utils/format';
-import { SPORTS, SESSION_TYPES } from '../utils/constants';
+import { SESSION_TYPES } from '../utils/constants';
 import { parseBinary, parseCSV, inferBinaryVersion } from '../utils/parsers';
 import { processSession } from '../utils/processing';
 import { supabase } from '../lib/supabase';
@@ -328,9 +328,6 @@ export default function SessionHistoryPage() {
                         </div>
                       </div>
                       <div className="session-card-badges">
-                        <span className="session-card-sport">
-                          {SPORTS.find(sp => sp.value === s.sport)?.label || s.sport}
-                        </span>
                         {s.session_type && (
                           <span className="session-card-type">
                             {SESSION_TYPES.find(t => t.value === s.session_type)?.label || s.session_type}
