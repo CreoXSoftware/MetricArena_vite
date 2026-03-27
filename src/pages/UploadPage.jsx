@@ -20,7 +20,7 @@ function rowToUTCDate(r) {
   return new Date(Date.UTC(+r.year, +r.month - 1, +r.day, +r.hour, +r.minute, +r.second, +r.millisecond || 0));
 }
 
-export default function UploadPage() {
+export default function UploadPage({ onClose } = {}) {
   const { profile, thresholds, setProcessedData, setCurrentSessionId, setLoadedSplits, activeSport } = useSession();
   const { user } = useAuth();
   const { myAvailableTeamSessions } = useTeamSessions();
@@ -143,7 +143,8 @@ export default function UploadPage() {
     setPendingFileBlob(null);
     setFileName('');
     setError(null);
-  }, []);
+    if (onClose) onClose();
+  }, [onClose]);
 
   // Derive session date/time and duration from raw parsed rows
   const sessionInfo = useMemo(() => {
@@ -156,104 +157,119 @@ export default function UploadPage() {
     return { startUtc, endUtc, durationSec };
   }, [pendingRows]);
 
-  if (loading) {
-    return (
-      <div className="loading" style={{ display: 'flex' }}>
-        <div className="spinner"></div>
-        <p>{pendingRows ? 'Processing session data…' : 'Reading file…'}</p>
-      </div>
-    );
-  }
-
-  // Step 2: File parsed, show session details form
-  if (pendingRows) {
-    const localDate = sessionInfo?.startUtc.toLocaleDateString(undefined, {
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-    });
-    const localTime = sessionInfo?.startUtc.toLocaleTimeString(undefined, {
-      hour: '2-digit', minute: '2-digit',
-    });
-    const localEndTime = sessionInfo?.endUtc.toLocaleTimeString(undefined, {
-      hour: '2-digit', minute: '2-digit',
-    });
-
-    return (
-      <div className="upload-details-page">
-        {error && (
-          <div className="upload-error">
-            Error: {error}
-            <button onClick={() => setError(null)} className="upload-error-close">&#x2715;</button>
-          </div>
-        )}
-
-        <h2 className="upload-details-title">Session Details</h2>
-
-        <div className="upload-session-summary">
-          <div className="upload-session-date">{localDate}</div>
-          <div className="upload-session-time">
-            {localTime} — {localEndTime} · {formatDuration(sessionInfo?.durationSec || 0)}
-          </div>
-          <div className="upload-session-meta">
-            {fileName} · {pendingRows.length.toLocaleString()} data points
-          </div>
+  const content = (() => {
+    if (loading) {
+      return (
+        <div className="loading" style={{ display: 'flex' }}>
+          <div className="spinner"></div>
+          <p>{pendingRows ? 'Processing session data…' : 'Reading file…'}</p>
         </div>
+      );
+    }
 
-        <div className="upload-details-card">
-          <div className="upload-details-row">
+    // Step 2: File parsed, show session details form
+    if (pendingRows) {
+      const localDate = sessionInfo?.startUtc.toLocaleDateString(undefined, {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      });
+      const localTime = sessionInfo?.startUtc.toLocaleTimeString(undefined, {
+        hour: '2-digit', minute: '2-digit',
+      });
+      const localEndTime = sessionInfo?.endUtc.toLocaleTimeString(undefined, {
+        hour: '2-digit', minute: '2-digit',
+      });
+
+      return (
+        <div className="upload-details-page">
+          {error && (
+            <div className="upload-error">
+              Error: {error}
+              <button onClick={() => setError(null)} className="upload-error-close">&#x2715;</button>
+            </div>
+          )}
+
+          <h2 className="upload-details-title">Session Details</h2>
+
+          <div className="upload-session-summary">
+            <div className="upload-session-date">{localDate}</div>
+            <div className="upload-session-time">
+              {localTime} — {localEndTime} · {formatDuration(sessionInfo?.durationSec || 0)}
+            </div>
+            <div className="upload-session-meta">
+              {fileName} · {pendingRows.length.toLocaleString()} data points
+            </div>
+          </div>
+
+          <div className="upload-details-card">
+            <div className="upload-details-row">
+              <label className="upload-details-label">
+                Session Type
+                <select value={sessionType} onChange={(e) => setSessionType(e.target.value)}>
+                  {SESSION_TYPES.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
             <label className="upload-details-label">
-              Session Type
-              <select value={sessionType} onChange={(e) => setSessionType(e.target.value)}>
-                {SESSION_TYPES.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
+              Link to Team Session (optional)
+              <select
+                value={selectedTeamSessionId}
+                onChange={(e) => setSelectedTeamSessionId(e.target.value)}
+              >
+                <option value="">None (private)</option>
+                {myAvailableTeamSessions.map(ts => (
+                  <option key={ts.id} value={ts.id}>
+                    {ts.team_name} — {ts.name} ({new Date(ts.session_date + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })})
+                  </option>
                 ))}
               </select>
             </label>
           </div>
 
-          <label className="upload-details-label">
-            Link to Team Session (optional)
-            <select
-              value={selectedTeamSessionId}
-              onChange={(e) => setSelectedTeamSessionId(e.target.value)}
-            >
-              <option value="">None (private)</option>
-              {myAvailableTeamSessions.map(ts => (
-                <option key={ts.id} value={ts.id}>
-                  {ts.team_name} — {ts.name} ({new Date(ts.session_date + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })})
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="upload-details-actions">
+            <button className="btn btn-accent btn-lg" onClick={handleConfirm}>
+              Analyze Session
+            </button>
+            <button className="btn btn-outline" onClick={handleCancel}>
+              Cancel
+            </button>
+          </div>
         </div>
+      );
+    }
 
-        <div className="upload-details-actions">
-          <button className="btn btn-accent btn-lg" onClick={handleConfirm}>
-            Analyze Session
-          </button>
-          <button className="btn btn-outline" onClick={handleCancel}>
-            Cancel
-          </button>
+    // Step 1: Upload / BLE file selection
+    return (
+      <>
+        {error && (
+          <div className="upload-error" style={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 1100, maxWidth: '90%' }}>
+            Error: {error}
+            <button onClick={() => setError(null)} className="upload-error-close">&#x2715;</button>
+          </div>
+        )}
+        <div id="upload-screen" style={{ display: 'flex' }}>
+          <div className="upload-panels">
+            <UploadBox onFile={parseFile} />
+            <div className="upload-or">or</div>
+            <BLECard onFileReady={handleBLEFileReady} />
+          </div>
+        </div>
+      </>
+    );
+  })();
+
+  if (onClose) {
+    return (
+      <div className="upload-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+        <div className="upload-modal">
+          <button className="upload-modal-close" onClick={onClose} aria-label="Close">&#x2715;</button>
+          {content}
         </div>
       </div>
     );
   }
 
-  // Step 1: Upload / BLE file selection
-  return (
-    <>
-      {error && (
-        <div className="upload-error" style={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 999, maxWidth: '90%' }}>
-          Error: {error}
-          <button onClick={() => setError(null)} className="upload-error-close">&#x2715;</button>
-        </div>
-      )}
-      <div id="upload-screen" style={{ display: 'flex' }}>
-        <div className="upload-panels">
-          <UploadBox onFile={parseFile} />
-          <div className="upload-or">or</div>
-          <BLECard onFileReady={handleBLEFileReady} />
-        </div>
-      </div>
-    </>
-  );
+  return content;
 }

@@ -24,7 +24,7 @@ export default function App() {
       {/* Protected routes with navbar layout */}
       <Route path="/app" element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route index element={<Navigate to="upload" replace />} />
+          <Route index element={<Navigate to="sessions" replace />} />
           <Route path="upload" element={<UploadPage />} />
           <Route path="dashboard" element={<SessionDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />

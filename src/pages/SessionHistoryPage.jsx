@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import UploadPage from './UploadPage';
 import { useSessions } from '../hooks/useSessions';
 import { useTeamSessions } from '../hooks/useTeamSessions';
 import { useTeams } from '../hooks/useTeams';
@@ -33,6 +34,7 @@ export default function SessionHistoryPage() {
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
 
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [linkingId, setLinkingId] = useState(null);
   const [pendingLinkSessionId, setPendingLinkSessionId] = useState(null);
   const [openingId, setOpeningId] = useState(null);
@@ -220,11 +222,13 @@ export default function SessionHistoryPage() {
 
       {viewMode === 'individual' && (
         <div className="sessions-add-row">
-          <button className="sessions-add-btn" onClick={() => navigate('/app/upload')} title="Upload session">
+          <button className="sessions-add-btn" onClick={() => setShowUploadModal(true)} title="Upload session">
             <span>+</span>
           </button>
         </div>
       )}
+
+      {showUploadModal && <UploadPage onClose={() => setShowUploadModal(false)} />}
 
       {viewMode === 'team' && managerTeams.length > 0 && (
         <div className="sessions-add-row">

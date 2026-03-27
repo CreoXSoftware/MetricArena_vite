@@ -21,14 +21,11 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      <NavLink to="/app/upload" className="navbar-brand">
+      <NavLink to="/app/sessions" className="navbar-brand">
         <BrandSmall />
       </NavLink>
 
       <div className="navbar-links">
-        <NavLink to="/app/upload" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          Upload
-        </NavLink>
         <NavLink to="/app/sessions" className={({ isActive }) => `nav-link ${isActive || sessionsDashboard ? 'active' : ''}`}>
           Sessions
         </NavLink>
