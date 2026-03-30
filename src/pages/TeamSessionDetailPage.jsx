@@ -11,6 +11,72 @@ import { processSession } from '../utils/processing';
 import { supabase } from '../lib/supabase';
 import { formatDuration } from '../utils/format';
 import { exportTeamSessionPDF, exportPlayerTeamSessionPDF } from '../utils/pdfExport';
+import ExportMenu from '../components/ExportMenu';
+
+function downloadCSV(csv, filename) {
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function toCSVRow(cells) {
+  return cells.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
+}
+
+function exportTeamSessionCSV(teamSessionName, sessionDate, playerSessions) {
+  const headers = toCSVRow(['Player', ...SUMMARY_COLS.map(c => c.label), 'Source']);
+  const rows = playerSessions.map(s => {
+    const summary = getSummaryMetrics(s);
+    const m = summary?.metrics;
+    return toCSVRow([
+      s.playerProfile.display_name || 'Unknown',
+      ...SUMMARY_COLS.map(c => m ? c.fmt(m[c.key]) : '—'),
+      summary?.source || '—',
+    ]);
+  });
+  downloadCSV([headers, ...rows].join('\n'), `${teamSessionName || 'team-session'}_${sessionDate || ''}.csv`);
+}
+
+function exportPlayerSessionCSV(teamSessionName, sessionDate, s) {
+  const summary = getSummaryMetrics(s);
+  const m = summary?.metrics;
+  if (!m) return;
+  const header = toCSVRow(['Metric', 'Value']);
+  const rows = [
+    ['Player', s.playerProfile.display_name || 'Unknown'],
+    ['Session', teamSessionName || ''],
+    ['Date', sessionDate || ''],
+    ['Source', summary.source],
+    ['Max Speed', `${(m.maxSpeedMs ?? m.maxSpeed / 3.6).toFixed(2)} m/s`],
+    ['Avg Speed', `${(m.avgSpeed / 3.6).toFixed(2)} m/s`],
+    ['Max Accel', m.maxAccel != null ? `${m.maxAccel.toFixed(1)} m/s²` : '—'],
+    ['Avg Accel', m.avgAccel != null ? `${m.avgAccel.toFixed(2)} m/s²` : '—'],
+    ['Max Decel', m.maxDecel != null ? `${m.maxDecel.toFixed(1)} m/s²` : '—'],
+    ['Distance', m.totalDist != null ? `${m.totalDist.toFixed(0)} m` : '—'],
+    ['High Speed Distance', m.highSpeedDist != null ? `${m.highSpeedDist.toFixed(0)} m` : '—'],
+    ['Sprint Distance', m.sprintDist != null ? `${m.sprintDist.toFixed(0)} m` : '—'],
+    ['Duration', m.duration != null ? formatDuration(m.duration) : '—'],
+    ['Time Moving', m.timeMoving != null ? formatDuration(m.timeMoving) : '—'],
+    ['Sprints', m.sprints ?? '—'],
+    ['Runs', m.runs ?? '—'],
+    ['Impacts', m.impacts ?? '—'],
+    ['Peak Force', m.peakForce != null ? `${m.peakForce.toFixed(0)} N` : '—'],
+    ['Avg Force', m.avgForce != null ? `${m.avgForce.toFixed(0)} N` : '—'],
+    ['Peak Power', m.peakPower != null ? `${m.peakPower.toFixed(0)} W` : '—'],
+    ['Avg Power', m.avgPower != null ? `${m.avgPower.toFixed(0)} W` : '—'],
+    ['Calories', m.totalCal != null ? `${m.totalCal.toFixed(0)} kcal` : '—'],
+    ['Work', m.work != null ? `${(m.work / 1000).toFixed(1)} kJ` : '—'],
+    ['Player Load', m.playerLoad != null ? `${m.playerLoad.toFixed(0)} au` : '—'],
+    ['PL / min', m.plPerMin != null ? `${m.plPerMin.toFixed(1)} au/min` : '—'],
+    ['Metabolic Power', m.metabolicPower != null ? `${m.metabolicPower.toFixed(1)} W/kg` : '—'],
+  ].map(toCSVRow);
+  const name = s.playerProfile.display_name || 'player';
+  downloadCSV([header, ...rows].join('\n'), `${teamSessionName || 'team-session'}_${name}_${sessionDate || ''}.csv`);
+}
 
 /** Pick the best available metrics for a session: first combined split, else full session. */
 function getSummaryMetrics(session) {
@@ -180,14 +246,14 @@ export default function TeamSessionDetailPage() {
               <button className="btn btn-sm btn-outline" onClick={startEdit}>Edit</button>
             )}
             {playerSessions.length > 0 && (
-              <button
-                className="btn btn-sm btn-outline"
-                onClick={() => exportTeamSessionPDF(
+              <ExportMenu
+                onExportPDF={() => exportTeamSessionPDF(
                   teamSession?.name, teamSession?.session_date, aggregate, playerSessions, getSummaryMetrics
                 )}
-              >
-                Export PDF
-              </button>
+                onExportCSV={() => exportTeamSessionCSV(
+                  teamSession?.name, teamSession?.session_date, playerSessions
+                )}
+              />
             )}
           </div>
         )}
@@ -411,17 +477,16 @@ export default function TeamSessionDetailPage() {
                     {isOpening && <span style={{ marginLeft: 8 }}>Opening…</span>}
                   </span>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      className="btn btn-sm btn-outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        exportPlayerTeamSessionPDF(
+                    <div onClick={e => e.stopPropagation()}>
+                      <ExportMenu
+                        onExportPDF={() => exportPlayerTeamSessionPDF(
                           teamSession?.name, teamSession?.session_date, aggregate, s, getSummaryMetrics
-                        );
-                      }}
-                    >
-                      Export PDF
-                    </button>
+                        )}
+                        onExportCSV={() => exportPlayerSessionCSV(
+                          teamSession?.name, teamSession?.session_date, s
+                        )}
+                      />
+                    </div>
                     {(isManager || isOwnSession) && (
                       <button
                         className="btn btn-sm btn-outline btn-danger"
