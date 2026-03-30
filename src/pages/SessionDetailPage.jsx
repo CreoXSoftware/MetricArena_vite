@@ -9,6 +9,7 @@ import SplitsPanel from '../components/SplitsPanel';
 import ExportMenu from '../components/ExportMenu';
 import { computeMetrics, aggregateMetrics } from '../utils/metrics';
 import { exportGPX, exportMetricsJSON, exportMetricsCSV } from '../utils/exporters';
+import { exportSessionPDF } from '../utils/pdfExport';
 import { formatDuration } from '../utils/format';
 import { useSession } from '../contexts/SessionContext';
 import { useSessions } from '../hooks/useSessions';
@@ -67,10 +68,11 @@ export default function SessionDetailPage({ guestMode } = {}) {
     });
   }, [splits, processedData, profile, localThresholds]);
 
-  const handleThresholdsApply = useCallback(() => {
-    setThresholds(localThresholds);
-    if (currentSessionId) updateSessionThresholds(currentSessionId, localThresholds);
-  }, [localThresholds, setThresholds, currentSessionId, updateSessionThresholds]);
+  const handleThresholdsApply = useCallback((newThresholds) => {
+    setLocalThresholds(newThresholds);
+    setThresholds(newThresholds);
+    if (currentSessionId) updateSessionThresholds(currentSessionId, newThresholds);
+  }, [setThresholds, currentSessionId, updateSessionThresholds]);
 
   const [unlinking, setUnlinking] = useState(false);
   const handleUnlink = useCallback(async () => {
@@ -220,6 +222,7 @@ export default function SessionDetailPage({ guestMode } = {}) {
         </div>
         <div className="export-bar">
           <ExportMenu
+            onExportPDF={() => exportSessionPDF(processedData, profile, metrics, localThresholds, splitsWithCurrentMetrics)}
             onExportGPX={() => exportGPX(processedData)}
             onExportJSON={() => exportMetricsJSON(processedData, profile, localThresholds, splitsWithCurrentMetrics)}
             onExportCSV={() => exportMetricsCSV(processedData, profile, localThresholds, splitsWithCurrentMetrics)}

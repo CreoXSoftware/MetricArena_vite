@@ -10,6 +10,7 @@ import { parseBinary, parseCSV, inferBinaryVersion } from '../utils/parsers';
 import { processSession } from '../utils/processing';
 import { supabase } from '../lib/supabase';
 import { formatDuration } from '../utils/format';
+import { exportTeamSessionPDF, exportPlayerTeamSessionPDF } from '../utils/pdfExport';
 
 /** Pick the best available metrics for a session: first combined split, else full session. */
 function getSummaryMetrics(session) {
@@ -169,7 +170,7 @@ export default function TeamSessionDetailPage() {
           </form>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
-            <div>
+            <div style={{ flex: 1 }}>
               <h2 className="page-title" style={{ marginBottom: 2 }}>
                 {teamSession?.name || 'Team Session'}
               </h2>
@@ -177,6 +178,16 @@ export default function TeamSessionDetailPage() {
             </div>
             {isManager && (
               <button className="btn btn-sm btn-outline" onClick={startEdit}>Edit</button>
+            )}
+            {playerSessions.length > 0 && (
+              <button
+                className="btn btn-sm btn-outline"
+                onClick={() => exportTeamSessionPDF(
+                  teamSession?.name, teamSession?.session_date, aggregate, playerSessions, getSummaryMetrics
+                )}
+              >
+                Export PDF
+              </button>
             )}
           </div>
         )}
@@ -400,6 +411,17 @@ export default function TeamSessionDetailPage() {
                     {isOpening && <span style={{ marginLeft: 8 }}>Opening…</span>}
                   </span>
                   <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      className="btn btn-sm btn-outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        exportPlayerTeamSessionPDF(
+                          teamSession?.name, teamSession?.session_date, aggregate, s, getSummaryMetrics
+                        );
+                      }}
+                    >
+                      Export PDF
+                    </button>
                     {(isManager || isOwnSession) && (
                       <button
                         className="btn btn-sm btn-outline btn-danger"

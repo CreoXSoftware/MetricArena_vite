@@ -17,7 +17,7 @@ export default function ThresholdsPanel({ thresholds, onChange, onApply, applyLa
 
   const handleApply = () => {
     onChange(local);
-    onApply();
+    onApply(local);
   };
 
   return (

@@ -22,7 +22,7 @@ function rowToUTCDate(r) {
 }
 
 export default function UploadPage({ onClose } = {}) {
-  const { profile, thresholds, setProcessedData, setCurrentSessionId, setLoadedSplits, activeSport } = useSession();
+  const { profile, thresholds, setProcessedData, setCurrentSessionId, setLoadedSplits, loadSessionFromHistory, activeSport } = useSession();
   const { user } = useAuth();
   const { myAvailableTeamSessions } = useTeamSessions();
   const { myTeams, getTeamMembers } = useTeams();
@@ -181,16 +181,8 @@ export default function UploadPage({ onClose } = {}) {
       if (saveError) throw new Error(saveError);
 
       if (isOnBehalf) {
-        // Stay on upload page with success message, then navigate to team session
-        const playerName = teamMembers.find(m => m.id === targetUserId)?.display_name || 'player';
-        setSuccessMsg(`Session uploaded for ${playerName}`);
-        setPendingRows(null);
-        setPendingFileBlob(null);
-        setFileName('');
-        setSelectedTeamSessionId('');
-        setSelectedPlayerId('');
-        setLoading(false);
-        setTimeout(() => setSuccessMsg(null), 4000);
+        loadSessionFromHistory(data, effectiveThresholds, [], saved?.id || null, playerProfileData);
+        navigate('/app/dashboard', { state: { from: 'sessions' } });
       } else {
         setLoadedSplits([]);
         setProcessedData(data);
@@ -202,7 +194,7 @@ export default function UploadPage({ onClose } = {}) {
       setError(err.message);
       setLoading(false);
     }
-  }, [pendingRows, user, profile, thresholds, activeSport, sessionType, selectedTeamSessionId, selectedPlayerId, playerProfileData, teamMembers, fileName, pendingFileBlob, setProcessedData, setCurrentSessionId, setLoadedSplits, navigate, saveSession]);
+  }, [pendingRows, user, profile, thresholds, activeSport, sessionType, selectedTeamSessionId, selectedPlayerId, playerProfileData, teamMembers, fileName, pendingFileBlob, setProcessedData, setCurrentSessionId, setLoadedSplits, loadSessionFromHistory, navigate, saveSession]);
 
   const handleCancel = useCallback(() => {
     setPendingRows(null);
@@ -224,6 +216,13 @@ export default function UploadPage({ onClose } = {}) {
     const durationSec = Math.max(0, (endUtc - startUtc) / 1000);
     return { startUtc, endUtc, durationSec };
   }, [pendingRows]);
+
+  // Filter team sessions to those whose date matches the file's UTC session date
+  const filteredTeamSessions = useMemo(() => {
+    if (!sessionInfo) return myAvailableTeamSessions;
+    const sessionDateUTC = sessionInfo.startUtc.toISOString().slice(0, 10);
+    return myAvailableTeamSessions.filter(ts => ts.session_date === sessionDateUTC);
+  }, [sessionInfo, myAvailableTeamSessions]);
 
   const content = (() => {
     if (loading) {
@@ -287,7 +286,7 @@ export default function UploadPage({ onClose } = {}) {
                 onChange={(e) => setSelectedTeamSessionId(e.target.value)}
               >
                 <option value="">None (private)</option>
-                {myAvailableTeamSessions.map(ts => (
+                {filteredTeamSessions.map(ts => (
                   <option key={ts.id} value={ts.id}>
                     {ts.team_name} — {ts.name} ({new Date(ts.session_date + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })})
                   </option>
