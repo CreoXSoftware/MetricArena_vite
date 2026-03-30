@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UploadBox from '../components/UploadBox';
 import BLECard from '../components/BLECard';
@@ -8,6 +8,7 @@ import { computeMetrics } from '../utils/metrics';
 import { useSession } from '../contexts/SessionContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTeamSessions } from '../hooks/useTeamSessions';
+import { useTeams } from '../hooks/useTeams';
 import { useSessions } from '../hooks/useSessions';
 import { formatDuration } from '../utils/format';
 import { SESSION_TYPES } from '../utils/constants';
@@ -24,10 +25,12 @@ export default function UploadPage({ onClose } = {}) {
   const { profile, thresholds, setProcessedData, setCurrentSessionId, setLoadedSplits, activeSport } = useSession();
   const { user } = useAuth();
   const { myAvailableTeamSessions } = useTeamSessions();
+  const { myTeams, getTeamMembers } = useTeams();
   const { saveSession } = useSessions();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
 
   // Parsed rows waiting for session details before processing
   const [pendingRows, setPendingRows] = useState(null);
@@ -36,6 +39,43 @@ export default function UploadPage({ onClose } = {}) {
   const [fileName, setFileName] = useState('');
   const [sessionType, setSessionType] = useState('game');
   const [selectedTeamSessionId, setSelectedTeamSessionId] = useState('');
+
+  // Manager upload-on-behalf state
+  const [selectedPlayerId, setSelectedPlayerId] = useState('');
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [playerProfileData, setPlayerProfileData] = useState(null);
+
+  // Determine if selected team session is from a team where user is manager
+  const selectedTs = myAvailableTeamSessions.find(ts => ts.id === selectedTeamSessionId);
+  const isManagerOfSelectedTeam = selectedTs && myTeams.some(t => t.id === selectedTs.team_id && t.is_manager);
+
+  // Fetch team members when a manager selects a team session
+  useEffect(() => {
+    if (!isManagerOfSelectedTeam || !selectedTs) {
+      setTeamMembers([]);
+      setSelectedPlayerId('');
+      setPlayerProfileData(null);
+      return;
+    }
+    getTeamMembers(selectedTs.team_id).then(members => {
+      setTeamMembers(members.filter(m => m.is_player));
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTeamSessionId, isManagerOfSelectedTeam]);
+
+  // Fetch the selected player's profile for accurate metrics
+  useEffect(() => {
+    if (!selectedPlayerId || selectedPlayerId === user?.id) {
+      setPlayerProfileData(null);
+      return;
+    }
+    supabase
+      .from('profiles')
+      .select('athlete_profile, default_thresholds')
+      .eq('id', selectedPlayerId)
+      .single()
+      .then(({ data }) => { if (data) setPlayerProfileData(data); });
+  }, [selectedPlayerId, user?.id]);
 
   const parseFile = useCallback((file) => {
     const isBinary = /\.bin$/i.test(file.name);
@@ -96,13 +136,24 @@ export default function UploadPage({ onClose } = {}) {
     if (!pendingRows || !user) return;
     setLoading(true);
     try {
+      const targetUserId = selectedPlayerId || user.id;
+      const isOnBehalf = targetUserId !== user.id;
+
+      // Use the player's profile/thresholds when uploading on behalf
+      const effectiveProfile = isOnBehalf && playerProfileData?.athlete_profile
+        ? { weight: 75, height: 178, age: 25, maxHR: 195, sex: 'male', sport: 'general', vo2max: 0, ...playerProfileData.athlete_profile }
+        : profile;
+      const effectiveThresholds = isOnBehalf && playerProfileData?.default_thresholds
+        ? playerProfileData.default_thresholds
+        : thresholds;
+
       const data = processSession(pendingRows);
-      const metrics = computeMetrics(data, profile, thresholds);
+      const metrics = computeMetrics(data, effectiveProfile, effectiveThresholds);
       const startUtc = rowToUTCDate(pendingRows[0]);
       const endUtc = rowToUTCDate(pendingRows[pendingRows.length - 1]);
       const durationSec = Math.max(0, (endUtc - startUtc) / 1000);
 
-      // Upload raw file to Supabase Storage
+      // Upload raw file to Supabase Storage (stored under uploader's path for storage RLS)
       let filePath = null;
       if (pendingFileBlob) {
         const storageName = `${user.id}/${Date.now()}-${fileName}`;
@@ -113,36 +164,53 @@ export default function UploadPage({ onClose } = {}) {
       }
 
       // Persist to Supabase
-      const { data: saved } = await saveSession({
-        sport: activeSport === 'all' ? (profile.sport || 'general') : activeSport,
+      const { data: saved, error: saveError } = await saveSession({
+        sport: activeSport === 'all' ? (effectiveProfile.sport || 'general') : activeSport,
         session_type: sessionType,
         session_date: startUtc.toISOString(),
         duration: durationSec,
         metrics,
-        thresholds,
-        profile_snapshot: profile,
+        thresholds: effectiveThresholds,
+        profile_snapshot: effectiveProfile,
         team_session_id: selectedTeamSessionId || null,
         file_name: fileName,
         file_path: filePath,
         splits: [],
-      });
+      }, isOnBehalf ? targetUserId : null);
 
-      setLoadedSplits([]);
-      setProcessedData(data);
-      setCurrentSessionId(saved?.id || null);
-      navigate('/app/dashboard');
+      if (saveError) throw new Error(saveError);
+
+      if (isOnBehalf) {
+        // Stay on upload page with success message, then navigate to team session
+        const playerName = teamMembers.find(m => m.id === targetUserId)?.display_name || 'player';
+        setSuccessMsg(`Session uploaded for ${playerName}`);
+        setPendingRows(null);
+        setPendingFileBlob(null);
+        setFileName('');
+        setSelectedTeamSessionId('');
+        setSelectedPlayerId('');
+        setLoading(false);
+        setTimeout(() => setSuccessMsg(null), 4000);
+      } else {
+        setLoadedSplits([]);
+        setProcessedData(data);
+        setCurrentSessionId(saved?.id || null);
+        navigate('/app/dashboard');
+      }
     } catch (err) {
       console.error('Processing error:', err);
       setError(err.message);
       setLoading(false);
     }
-  }, [pendingRows, user, profile, thresholds, activeSport, sessionType, selectedTeamSessionId, fileName, pendingFileBlob, setProcessedData, setCurrentSessionId, navigate, saveSession]);
+  }, [pendingRows, user, profile, thresholds, activeSport, sessionType, selectedTeamSessionId, selectedPlayerId, playerProfileData, teamMembers, fileName, pendingFileBlob, setProcessedData, setCurrentSessionId, setLoadedSplits, navigate, saveSession]);
 
   const handleCancel = useCallback(() => {
     setPendingRows(null);
     setPendingFileBlob(null);
     setFileName('');
     setError(null);
+    setSelectedTeamSessionId('');
+    setSelectedPlayerId('');
     if (onClose) onClose();
   }, [onClose]);
 
@@ -226,6 +294,21 @@ export default function UploadPage({ onClose } = {}) {
                 ))}
               </select>
             </label>
+
+            {isManagerOfSelectedTeam && selectedTeamSessionId && (
+              <label className="upload-details-label">
+                Upload on behalf of
+                <select
+                  value={selectedPlayerId}
+                  onChange={(e) => setSelectedPlayerId(e.target.value)}
+                >
+                  <option value="">Myself</option>
+                  {teamMembers.filter(m => m.id !== user.id).map(m => (
+                    <option key={m.id} value={m.id}>{m.display_name || 'Unknown'}</option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
 
           <div className="upload-details-actions">
@@ -243,6 +326,11 @@ export default function UploadPage({ onClose } = {}) {
     // Step 1: Upload / BLE file selection
     return (
       <>
+        {successMsg && (
+          <div className="upload-success" style={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 1100, maxWidth: '90%', background: 'var(--accent)', color: '#000', padding: '12px 24px', borderRadius: 8, fontWeight: 600 }}>
+            {successMsg}
+          </div>
+        )}
         {error && (
           <div className="upload-error" style={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 1100, maxWidth: '90%' }}>
             Error: {error}

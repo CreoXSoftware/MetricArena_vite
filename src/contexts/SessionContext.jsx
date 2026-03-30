@@ -59,6 +59,7 @@ export function SessionProvider({ children }) {
   });
   const [loadedSplits, setLoadedSplits] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [viewProfile, setViewProfile] = useState(null);
   const [activeSport, setActiveSportState] = useState(loadActiveSport);
 
   const setActiveSport = useCallback((sport) => {
@@ -106,14 +107,17 @@ export function SessionProvider({ children }) {
     setProcessedData(null);
     setLoadedSplits([]);
     setCurrentSessionId(null);
+    setViewProfile(null);
   }, []);
 
-  /** Called when opening a session from history — overrides thresholds with the session's own saved values. */
-  const loadSessionFromHistory = useCallback((data, sessionThresholds, sessionSplits, sessionId) => {
+  /** Called when opening a session from history — overrides thresholds with the session's own saved values.
+   *  profileOverride is used when a manager views another player's session. */
+  const loadSessionFromHistory = useCallback((data, sessionThresholds, sessionSplits, sessionId, profileOverride = null) => {
     setProcessedData(data);
     if (sessionThresholds) setThresholds(sessionThresholds);
     setLoadedSplits(sessionSplits || []);
     setCurrentSessionId(sessionId || null);
+    setViewProfile(profileOverride || null);
   }, []);
 
   return (
@@ -126,6 +130,7 @@ export function SessionProvider({ children }) {
       loadedSplits, setLoadedSplits,
       currentSessionId, setCurrentSessionId,
       loadSessionFromHistory,
+      viewProfile,
       activeSport, setActiveSport,
     }}>
       {children}

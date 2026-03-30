@@ -75,7 +75,7 @@ export default function TeamSessionDetailPage() {
 
   const aggregate = useMemo(() => computeTeamAggregate(playerSessions), [playerSessions]);
 
-  const openSession = async (s) => {
+  const openSession = async (s, managerMode = false) => {
     if (!s.file_path) { setOpenError('No stored file — cannot open this session.'); return; }
     setOpeningId(s.id);
     setOpenError(null);
@@ -91,8 +91,12 @@ export default function TeamSessionDetailPage() {
         rows = parseCSV(await blob.text());
       }
       const data = processSession(rows);
-      loadSessionFromHistory(data, s.thresholds, s.splits || [], s.id);
-      navigate('/app/dashboard');
+      loadSessionFromHistory(data, s.thresholds, s.splits || [], s.id, managerMode ? s.profile_snapshot : null);
+      navigate('/app/dashboard', {
+        state: managerMode
+          ? { from: 'teamSession', teamSessionId, managerMode: true }
+          : { from: 'sessions' },
+      });
     } catch (err) {
       setOpenError(err.message);
       setOpeningId(null);
@@ -102,7 +106,7 @@ export default function TeamSessionDetailPage() {
   const unlinkSession = async (sessionId, e) => {
     e.stopPropagation();
     setUnlinkingId(sessionId);
-    await supabase.from('sessions').update({ team_session_id: null }).eq('id', sessionId);
+    await supabase.rpc('manager_unlink_session', { p_session_id: sessionId });
     setExpandedId(null);
     setUnlinkingId(null);
     refresh();
@@ -326,7 +330,6 @@ export default function TeamSessionDetailPage() {
                     const summary = getSummaryMetrics(s);
                     const m = summary?.metrics;
                     const isOwnSession = s.user_id === user?.id;
-                    const isOpening = openingId === s.id;
                     const isExpanded = expandedId === s.id;
                     return (
                       <tr
@@ -367,7 +370,7 @@ export default function TeamSessionDetailPage() {
               </table>
             </div>
             <p className="text-dim" style={{ fontSize: 12, marginTop: 8 }}>
-              Click a row to expand all metrics · Click the expanded card to open your session
+              Click a row to expand all metrics · Click the expanded card to open {isManager ? 'the' : 'your'} session
             </p>
           </div>
 
@@ -380,11 +383,12 @@ export default function TeamSessionDetailPage() {
             const isOwnSession = s.user_id === user?.id;
             const isOpening = openingId === s.id;
             if (!m) return null;
+            const canOpen = (isOwnSession || isManager) && s.file_path;
             return (
               <div
-                className={`ts-detail-section ts-expanded-panel${isOwnSession && s.file_path ? ' ts-expanded-panel-clickable' : ''}`}
-                onClick={() => isOwnSession && !isOpening && s.file_path && openSession(s)}
-                title={isOwnSession && s.file_path ? 'Click to open session' : undefined}
+                className={`ts-detail-section ts-expanded-panel${canOpen ? ' ts-expanded-panel-clickable' : ''}`}
+                onClick={() => canOpen && !isOpening && openSession(s, !isOwnSession)}
+                title={canOpen ? 'Click to open session' : undefined}
               >
                 <div className="ts-expanded-header">
                   <span className="ts-expanded-title">

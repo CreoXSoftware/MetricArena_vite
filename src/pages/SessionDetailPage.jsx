@@ -14,11 +14,17 @@ import { useSession } from '../contexts/SessionContext';
 import { useSessions } from '../hooks/useSessions';
 
 export default function SessionDetailPage({ guestMode } = {}) {
-  const { processedData, profile, thresholds, setThresholds, loadedSplits, currentSessionId } = useSession();
-  const { updateSessionSplits, updateSessionThresholds } = useSessions();
+  const { processedData, profile: contextProfile, thresholds, setThresholds, loadedSplits, currentSessionId, viewProfile } = useSession();
+  const { updateSessionSplits, updateSessionThresholds, unlinkFromTeamSession } = useSessions();
   const navigate = useNavigate();
   const location = useLocation();
   const fromSessions = location.state?.from === 'sessions';
+  const fromTeamSession = location.state?.from === 'teamSession';
+  const managerMode = location.state?.managerMode;
+  const teamSessionId = location.state?.teamSessionId;
+
+  // In manager mode, use the player's profile snapshot instead of the logged-in user's profile
+  const profile = (managerMode && viewProfile) ? viewProfile : contextProfile;
 
   const [localThresholds, setLocalThresholds] = useState(thresholds);
   const [chartView, setChartView] = useState(() => ({
@@ -65,6 +71,15 @@ export default function SessionDetailPage({ guestMode } = {}) {
     setThresholds(localThresholds);
     if (currentSessionId) updateSessionThresholds(currentSessionId, localThresholds);
   }, [localThresholds, setThresholds, currentSessionId, updateSessionThresholds]);
+
+  const [unlinking, setUnlinking] = useState(false);
+  const handleUnlink = useCallback(async () => {
+    if (!currentSessionId) return;
+    setUnlinking(true);
+    await unlinkFromTeamSession(currentSessionId);
+    setUnlinking(false);
+    navigate(`/app/sessions/team/${teamSessionId}`);
+  }, [currentSessionId, teamSessionId, navigate, unlinkFromTeamSession]);
 
   // Auto-save splits to DB whenever the splits array changes (add/delete/rename/combine).
   // Skip the initial mount to avoid overwriting DB splits with the loaded state.
@@ -179,6 +194,10 @@ export default function SessionDetailPage({ guestMode } = {}) {
             <button className="btn-link back-btn" onClick={() => navigate('/')}>
               ← Home
             </button>
+          ) : fromTeamSession ? (
+            <button className="btn-link back-btn" onClick={() => navigate(`/app/sessions/team/${teamSessionId}`)}>
+              ← Team Session
+            </button>
           ) : fromSessions && (
             <button className="btn-link back-btn" onClick={() => navigate('/app/sessions')}>
               ← Sessions
@@ -188,6 +207,16 @@ export default function SessionDetailPage({ guestMode } = {}) {
             <h2>Session Overview</h2>
             <div className="session-info">{sessionInfo}</div>
           </div>
+          {managerMode && currentSessionId && (
+            <button
+              className="btn btn-sm btn-outline btn-danger"
+              style={{ marginLeft: 'auto' }}
+              onClick={handleUnlink}
+              disabled={unlinking}
+            >
+              {unlinking ? 'Unlinking…' : 'Unlink from Team Session'}
+            </button>
+          )}
         </div>
         <div className="export-bar">
           <ExportMenu

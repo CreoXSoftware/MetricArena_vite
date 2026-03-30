@@ -214,7 +214,9 @@ RLS uses three `SECURITY DEFINER` helper functions to avoid infinite recursion o
 | sessions | Own sessions | SELECT | `user_id = auth.uid()` |
 | sessions | Manager sees linked | SELECT | `team_session_id IN (team sessions from manager's teams)` |
 | sessions | Insert own | INSERT | `user_id = auth.uid()` |
+| sessions | Manager insert on behalf | INSERT | `team_session_id IN manager's team sessions AND user_id IN team members` |
 | sessions | Update own | UPDATE | `user_id = auth.uid()` |
+| sessions | Manager update linked | UPDATE | USING `team_session_id IN manager's team sessions` · WITH CHECK `team_session_id IS NULL OR in manager's team sessions` |
 | sessions | Delete own | DELETE | `user_id = auth.uid()` |
 
 ### Binary File Formats

@@ -55,11 +55,13 @@ export function useSessions() {
     if (!loadingMore && hasMore) fetchSessions(false);
   }, [fetchSessions, loadingMore, hasMore]);
 
-  const saveSession = useCallback(async (sessionData) => {
+  /** Save a new session. Pass onBehalfOfUserId to create a session owned by another user (manager feature). */
+  const saveSession = useCallback(async (sessionData, onBehalfOfUserId = null) => {
     if (!user) return { error: 'Not authenticated' };
+    const targetUserId = onBehalfOfUserId || user.id;
     const { data, error } = await supabase
       .from('sessions')
-      .insert({ user_id: user.id, ...sessionData })
+      .insert({ user_id: targetUserId, ...sessionData })
       .select()
       .single();
     if (error) return { error: error.message };
