@@ -22,6 +22,7 @@ const DEFAULT_PROFILE = {
   positionsBySport: {},
   province: '',
   country: '',
+  is_public: true,
 };
 
 // localStorage cache for fast initial render / offline fallback

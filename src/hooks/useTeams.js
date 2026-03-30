@@ -37,7 +37,7 @@ export function useTeams() {
     const teamIds = memberships.map(m => m.team_id);
     const { data: teams, error: teamsErr } = await supabase
       .from('teams')
-      .select('id, name, sport, invite_code, created_at, avatar_url, province, country')
+      .select('id, name, sport, invite_code, created_at, avatar_url, province, country, is_public')
       .in('id', teamIds);
 
 

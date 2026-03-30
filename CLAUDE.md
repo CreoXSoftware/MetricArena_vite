@@ -60,6 +60,11 @@ Supabase (Auth + PostgreSQL + Storage)
 - Manager role is transferable to another member (current manager loses it on transfer).
 - No global coach/player distinction at the account level.
 
+### Privacy / Leaderboard Visibility
+
+- **Players**: `athlete_profile.is_public` (boolean, default `true`). Stored in the JSONB `athlete_profile` column on `profiles`. Toggle on ProfilePage. When `false`, the player is excluded from public leaderboards and comparisons (filtered server-side in the `get_individual_leaderboard` RPC).
+- **Teams**: `teams.is_public` (boolean column, default `true`). Toggle on TeamDetailPage (manager only). When `false`, the team is excluded from the `get_team_leaderboard` RPC.
+
 ### Teams & Sessions Model
 
 - **Teams**: name, sport, 8-char invite code. Any user can create (becomes manager) or join via invite code.
@@ -93,14 +98,16 @@ Supabase (Auth + PostgreSQL + Storage)
 | RegisterPage | `/register` | Auth: registration |
 | UploadPage | `/app/upload` | File upload + BLE download |
 | DashboardPage | `/app/dashboard` | Session metrics (charts, heatmaps, grids, splits) |
-| ProfilePage | `/app/profile` | User profile & athlete settings |
+| LeaderboardPage | `/app/leaderboard` | Rankings (individuals/teams) + head-to-head Compare tab |
+| ProfilePage | `/app/profile` | User profile, athlete settings, privacy toggle |
 | TeamsPage | `/app/teams` | Create/join teams; filtered by activeSport |
-| TeamDetailPage | `/app/teams/:teamId` | Members list, manager transfer, invite code |
+| TeamDetailPage | `/app/teams/:teamId` | Members list, manager transfer, invite code, privacy toggle |
 | SessionHistoryPage | `/app/sessions` | Dual view: individual sessions + team sessions; link/unlink; manager CRUD for team sessions |
 | TeamSessionDetailPage | `/app/sessions/team/:teamSessionId` | Player comparison table for a team event; manager can edit/delete |
 
 ### Hook Summaries
 
+- **`useLeaderboard`** — leaderboard ranking (`fetchIndividual`, `fetchTeam`), comparison (`fetchPlayerComparison`, `fetchTeamComparison`, `clearComparison`), search helpers (`searchPlayers`, `searchTeams`)
 - **`useTeams`** — fetch user's teams (with `is_manager`/`is_player` flags), `createTeam`, `joinTeam`, `leaveTeam`, `removeMember`, `transferManager`, `searchUsers`, `getTeamMembers`
 - **`useTeamSessions`** — dual state: `teamSessions` (per-team, used in TeamDetailPage) and `myAvailableTeamSessions` (paginated across all user's teams, used in linking UI). `createTeamSession`, `updateTeamSession`, `deleteTeamSession`
 - **`useTeamSessionDetail`** — fetch all sessions linked to a specific team session, enriched with player profiles (`display_name`, `avatar_url`). Managers see all players' sessions.
@@ -127,6 +134,7 @@ Supabase (Auth + PostgreSQL + Storage)
 | name | text | NO | — |
 | sport | text | NO | `'general'` |
 | invite_code | text | NO | — |
+| is_public | boolean | NO | `true` |
 | created_by | uuid | NO | — |
 | created_at | timestamptz | YES | `now()` |
 

@@ -13,7 +13,7 @@ import { formatDuration } from '../utils/format';
 import { useSession } from '../contexts/SessionContext';
 import { useSessions } from '../hooks/useSessions';
 
-export default function SessionDetailPage() {
+export default function SessionDetailPage({ guestMode } = {}) {
   const { processedData, profile, thresholds, setThresholds, loadedSplits, currentSessionId } = useSession();
   const { updateSessionSplits, updateSessionThresholds } = useSessions();
   const navigate = useNavigate();
@@ -164,7 +164,7 @@ export default function SessionDetailPage() {
     }));
   }, [processedData]);
 
-  if (!processedData) return <Navigate to="/app/upload" replace />;
+  if (!processedData) return <Navigate to={guestMode ? '/' : '/app/upload'} replace />;
 
   const d0 = processedData[0];
   const sessionInfo = d0
@@ -175,7 +175,11 @@ export default function SessionDetailPage() {
     <div className="dashboard">
       <div className="dash-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {fromSessions && (
+          {guestMode ? (
+            <button className="btn-link back-btn" onClick={() => navigate('/')}>
+              ← Home
+            </button>
+          ) : fromSessions && (
             <button className="btn-link back-btn" onClick={() => navigate('/app/sessions')}>
               ← Sessions
             </button>

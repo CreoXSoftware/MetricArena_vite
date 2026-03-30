@@ -22,6 +22,9 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
+      {/* Public quick analysis (no auth required) */}
+      <Route path="/quick-analysis" element={<SessionDetailPage guestMode />} />
+
       {/* Protected routes with navbar layout */}
       <Route path="/app" element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>

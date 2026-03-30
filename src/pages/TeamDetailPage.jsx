@@ -307,6 +307,31 @@ export default function TeamDetailPage() {
       </div>
 
       {isManager && (
+        <div className="team-section">
+          <div className="team-privacy-row">
+            <div>
+              <h4 className="team-privacy-title">Leaderboard Visibility</h4>
+              <p className="profile-section-hint" style={{ margin: 0 }}>
+                When Private, this team won't appear on public leaderboards.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={`toggle-btn${team.is_public !== false ? ' active' : ''}`}
+              onClick={async () => {
+                await updateTeam(teamId, { is_public: !(team.is_public !== false) });
+              }}
+            >
+              <span className="toggle-track">
+                <span className="toggle-thumb" />
+              </span>
+              <span className="toggle-label">{team.is_public !== false ? 'Public' : 'Private'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isManager && (
         <div className="team-section team-danger-zone">
           <h3 className="team-section-title">Danger Zone</h3>
           {!showDeleteConfirm ? (

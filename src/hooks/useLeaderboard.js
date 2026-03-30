@@ -83,5 +83,69 @@ export function useLeaderboard() {
     setHasMore(false);
   }, []);
 
-  return { entries, loading, loadingMore, hasMore, fetchIndividual, fetchTeam, clear };
+  // --- Comparison ---
+  const [comparison, setComparison] = useState(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+
+  const fetchPlayerComparison = useCallback(async (userIds, filters = {}) => {
+    setComparisonLoading(true);
+    setComparison(null);
+    const { data, error } = await supabase.rpc('get_player_comparison', {
+      p_user_ids: userIds,
+      p_sport: filters.sport === 'all' ? null : (filters.sport || null),
+      p_session_type: filters.sessionType === 'all' ? null : (filters.sessionType || null),
+      p_date_from: filters.dateFrom || null,
+      p_date_to: filters.dateTo || null,
+    });
+    if (error) console.error('Player comparison RPC error:', error);
+    setComparison(data || []);
+    setComparisonLoading(false);
+  }, []);
+
+  const fetchTeamComparison = useCallback(async (teamIds, filters = {}) => {
+    setComparisonLoading(true);
+    setComparison(null);
+    const { data, error } = await supabase.rpc('get_team_comparison', {
+      p_team_ids: teamIds,
+      p_sport: filters.sport === 'all' ? null : (filters.sport || null),
+      p_session_type: filters.sessionType === 'all' ? null : (filters.sessionType || null),
+      p_date_from: filters.dateFrom || null,
+      p_date_to: filters.dateTo || null,
+    });
+    if (error) console.error('Team comparison RPC error:', error);
+    setComparison(data || []);
+    setComparisonLoading(false);
+  }, []);
+
+  const clearComparison = useCallback(() => {
+    setComparison(null);
+    setComparisonLoading(false);
+  }, []);
+
+  // --- Search for comparison targets ---
+  const searchPlayers = useCallback(async (query) => {
+    if (!query || query.length < 2) return [];
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url')
+      .ilike('display_name', `%${query}%`)
+      .limit(10);
+    return data || [];
+  }, []);
+
+  const searchTeams = useCallback(async (query) => {
+    if (!query || query.length < 2) return [];
+    const { data } = await supabase
+      .from('teams')
+      .select('id, name, avatar_url, sport')
+      .ilike('name', `%${query}%`)
+      .limit(10);
+    return data || [];
+  }, []);
+
+  return {
+    entries, loading, loadingMore, hasMore, fetchIndividual, fetchTeam, clear,
+    comparison, comparisonLoading, fetchPlayerComparison, fetchTeamComparison, clearComparison,
+    searchPlayers, searchTeams,
+  };
 }

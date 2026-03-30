@@ -272,6 +272,25 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        <div className="profile-grid" style={{ marginTop: '12px' }}>
+          <div className="field wide">
+            <label>Leaderboard Visibility</label>
+            <p className="profile-section-hint" style={{ margin: '0 0 8px' }}>
+              When set to Private, your profile will not appear on public leaderboards or comparisons.
+            </p>
+            <button
+              type="button"
+              className={`toggle-btn${athleteForm.is_public !== false ? ' active' : ''}`}
+              onClick={() => handleAthleteFormChange('is_public', !(athleteForm.is_public !== false))}
+            >
+              <span className="toggle-track">
+                <span className="toggle-thumb" />
+              </span>
+              <span className="toggle-label">{athleteForm.is_public !== false ? 'Public' : 'Private'}</span>
+            </button>
+          </div>
+        </div>
+
         {athleteError && <div className="profile-hint" style={{ color: 'var(--error)' }}>{athleteError}</div>}
         <div className="profile-account-actions" style={{ marginTop: '12px' }}>
           <button className="btn btn-accent" onClick={handleSaveAthleteProfile} disabled={athleteSaving}>
