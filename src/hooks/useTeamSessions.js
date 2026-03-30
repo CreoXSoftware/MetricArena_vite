@@ -8,6 +8,8 @@ function getBestMetrics(session) {
   const splits = session.splits || [];
   const combined = splits.find(s => s.isCombined && s.metrics);
   if (combined) return combined.metrics;
+  const firstSplit = splits.find(s => !s.isCombined && s.metrics);
+  if (firstSplit) return firstSplit.metrics;
   return session.metrics || null;
 }
 

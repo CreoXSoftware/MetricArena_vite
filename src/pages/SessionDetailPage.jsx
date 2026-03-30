@@ -68,6 +68,15 @@ export default function SessionDetailPage({ guestMode } = {}) {
     });
   }, [splits, processedData, profile, localThresholds]);
 
+  /** Pick the best metrics to display in the top cards: combined split > first split > full session. */
+  const { displayMetrics, metricsSource } = useMemo(() => {
+    const combined = splitsWithCurrentMetrics.find(s => s.isCombined && s.metrics);
+    if (combined) return { displayMetrics: combined.metrics, metricsSource: combined.name };
+    const firstSplit = splitsWithCurrentMetrics.find(s => !s.isCombined && s.metrics);
+    if (firstSplit) return { displayMetrics: firstSplit.metrics, metricsSource: firstSplit.name };
+    return { displayMetrics: metrics, metricsSource: 'Full session' };
+  }, [splitsWithCurrentMetrics, metrics]);
+
   const handleThresholdsApply = useCallback((newThresholds) => {
     setLocalThresholds(newThresholds);
     setThresholds(newThresholds);
@@ -236,7 +245,13 @@ export default function SessionDetailPage({ guestMode } = {}) {
         onApply={handleThresholdsApply}
       />
 
-      <MetricsGrid metrics={metrics} thresholds={localThresholds} />
+      <div className="metrics-source-header">
+        <span className="metrics-source-label">Metrics source:</span>
+        <span className={`session-source-badge session-source-${metricsSource === 'Full session' ? 'full' : splitsWithCurrentMetrics.find(s => s.isCombined && s.metrics) ? 'combined' : 'split'}`}>
+          {metricsSource}
+        </span>
+      </div>
+      <MetricsGrid metrics={displayMetrics} thresholds={localThresholds} />
 
       <SpeedZones metrics={metrics} thresholds={localThresholds} />
 

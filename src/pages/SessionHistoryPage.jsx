@@ -15,8 +15,10 @@ import { supabase } from '../lib/supabase';
 function getSummaryMetrics(session) {
   const splits = session.splits || [];
   const combined = splits.find(s => s.isCombined && s.metrics);
-  if (combined) return { metrics: combined.metrics, source: combined.name };
-  if (session.metrics) return { metrics: session.metrics, source: 'Full session' };
+  if (combined) return { metrics: combined.metrics, source: combined.name, sourceType: 'combined' };
+  const firstSplit = splits.find(s => !s.isCombined && s.metrics);
+  if (firstSplit) return { metrics: firstSplit.metrics, source: firstSplit.name, sourceType: 'split' };
+  if (session.metrics) return { metrics: session.metrics, source: 'Full session', sourceType: 'full' };
   return null;
 }
 
@@ -321,7 +323,7 @@ export default function SessionHistoryPage() {
                           {date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                           {' · '}{formatDuration(m.duration || s.duration || 0)}
                           {summary && (
-                            <span className={`session-source-badge${summary.source === 'Full session' ? ' session-source-full' : ' session-source-combined'}`}>
+                            <span className={`session-source-badge session-source-${summary.sourceType}`}>
                               {summary.source}
                             </span>
                           )}

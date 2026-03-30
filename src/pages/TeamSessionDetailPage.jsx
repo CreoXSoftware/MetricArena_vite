@@ -78,12 +78,14 @@ function exportPlayerSessionCSV(teamSessionName, sessionDate, s) {
   downloadCSV([header, ...rows].join('\n'), `${teamSessionName || 'team-session'}_${name}_${sessionDate || ''}.csv`);
 }
 
-/** Pick the best available metrics for a session: first combined split, else full session. */
+/** Pick the best available metrics: combined split > first split > full session. */
 function getSummaryMetrics(session) {
   const splits = session.splits || [];
   const combined = splits.find(s => s.isCombined && s.metrics);
-  if (combined) return { metrics: combined.metrics, source: combined.name };
-  if (session.metrics) return { metrics: session.metrics, source: 'Full session' };
+  if (combined) return { metrics: combined.metrics, source: combined.name, sourceType: 'combined' };
+  const firstSplit = splits.find(s => !s.isCombined && s.metrics);
+  if (firstSplit) return { metrics: firstSplit.metrics, source: firstSplit.name, sourceType: 'split' };
+  if (session.metrics) return { metrics: session.metrics, source: 'Full session', sourceType: 'full' };
   return null;
 }
 
@@ -435,7 +437,7 @@ export default function TeamSessionDetailPage() {
                         ))}
                         <td className="ts-source-cell">
                           {summary ? (
-                            <span className={`ts-source-badge${summary.source === 'Full session' ? ' ts-source-full' : ' ts-source-split'}`}>
+                            <span className={`ts-source-badge ts-source-${summary.sourceType}`}>
                               {summary.source}
                             </span>
                           ) : '—'}
