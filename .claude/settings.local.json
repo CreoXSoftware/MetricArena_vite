@@ -11,7 +11,12 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena/src -type f -name *logo* -o -name *brand* -o -name *favicon*)",
-      "Bash(find c:UsersnelisDocumentsCreoXMetricAthletemetric-arena-vitemetric-arena -type f -name *.md -o -name schema* -o -name *database*)"
+      "Bash(find c:UsersnelisDocumentsCreoXMetricAthletemetric-arena-vitemetric-arena -type f -name *.md -o -name schema* -o -name *database*)",
+      "Bash(xargs grep:*)",
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/MetricArena -type f \\\\\\(-name *.sql -o -name *.md \\\\\\))",
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite -type f -name *.md)",
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena -type f \\\\\\(-name *.sql -o -name *schema* -o -name *migration* \\\\\\))",
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena -path */node_modules -prune -o -type d -name backend -o -type d -name server -o -type d -name api -print)"
     ]
   }
 }

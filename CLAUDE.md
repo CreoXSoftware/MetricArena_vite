@@ -46,14 +46,14 @@ Supabase (Auth + PostgreSQL + Storage)
 
 - **React Router v7** — `src/App.jsx` defines all routes
 - **Public routes**: `/` (landing), `/login`, `/register`
-- **Protected routes** (behind `ProtectedRoute`): `/app/upload`, `/app/dashboard`, `/app/profile`, `/app/teams`, `/app/teams/:teamId`, `/app/sessions`, `/app/sessions/team/:teamSessionId`
+- **Protected routes** (behind `ProtectedRoute`): `/app/upload`, `/app/dashboard`, `/app/profile`, `/app/teams`, `/app/teams/:teamId`, `/app/sessions`, `/app/sessions/team/:teamSessionId`, `/app/admin` (admin-only, redirects non-admins)
 - **AuthContext** (`src/contexts/AuthContext.jsx`) — user, profile, signUp/signIn/signOut/refreshProfile
 - **SessionContext** (`src/contexts/SessionContext.jsx`) — processedData, thresholds, splits, athlete profile (localStorage), activeSport
 - **AppLayout** wraps protected routes with `Navbar` + `<Outlet />`
 
 ### Role Model
 
-- Two account roles: `user` (default) and `admin` (set in DB only, no UI)
+- Two account roles: `user` (default) and `admin` (set in DB only). Admins have access to `/app/admin` panel and can verify players/sessions.
 - Team roles are per-team flags on `team_members`:
   - `is_manager` (boolean) — can create/edit/delete team sessions, transfer manager role, remove members. Team creator gets `is_manager = true` automatically.
   - `is_player` (boolean, default true) — whether the member is also a player (as opposed to manager-only). Set on join/create.
@@ -104,6 +104,7 @@ Supabase (Auth + PostgreSQL + Storage)
 | TeamDetailPage | `/app/teams/:teamId` | Members list, manager transfer, invite code, privacy toggle |
 | SessionHistoryPage | `/app/sessions` | Dual view: individual sessions + team sessions; link/unlink; manager CRUD for team sessions |
 | TeamSessionDetailPage | `/app/sessions/team/:teamSessionId` | Player comparison table for a team event; manager can edit/delete |
+| AdminPage | `/app/admin` | Admin-only: verify/unverify players and sessions |
 
 ### Hook Summaries
 
@@ -122,6 +123,7 @@ Supabase (Auth + PostgreSQL + Storage)
 | display_name | text | NO | `''` |
 | avatar_url | text | YES | — |
 | role | text | NO | `'user'` |
+| is_verified | boolean | NO | `false` |
 | athlete_profile | jsonb | YES | — |
 | default_thresholds | jsonb | YES | — |
 | created_at | timestamptz | NO | `now()` |
@@ -135,6 +137,7 @@ Supabase (Auth + PostgreSQL + Storage)
 | sport | text | NO | `'general'` |
 | invite_code | text | NO | — |
 | is_public | boolean | NO | `true` |
+| is_verified | boolean | NO | `false` |
 | created_by | uuid | NO | — |
 | created_at | timestamptz | YES | `now()` |
 
@@ -172,6 +175,7 @@ Supabase (Auth + PostgreSQL + Storage)
 | profile_snapshot | jsonb | NO | `{}` |
 | splits | jsonb | YES | `[]` |
 | team_session_id | uuid | YES | — |
+| is_verified | boolean | NO | `false` |
 | file_name | text | YES | — |
 | file_path | text | YES | — |
 | created_at | timestamptz | YES | `now()` |
@@ -218,6 +222,10 @@ RLS uses three `SECURITY DEFINER` helper functions to avoid infinite recursion o
 | sessions | Update own | UPDATE | `user_id = auth.uid()` |
 | sessions | Manager update linked | UPDATE | USING `team_session_id IN manager's team sessions` · WITH CHECK `team_session_id IS NULL OR in manager's team sessions` |
 | sessions | Delete own | DELETE | `user_id = auth.uid()` |
+| profiles | Admin can verify profiles | UPDATE | `(SELECT role FROM profiles WHERE id = auth.uid()) = 'admin'` |
+| sessions | Admin can read all sessions | SELECT | `(SELECT role FROM profiles WHERE id = auth.uid()) = 'admin'` |
+| sessions | Admin can verify sessions | UPDATE | `(SELECT role FROM profiles WHERE id = auth.uid()) = 'admin'` |
+| teams | Admin can verify teams | UPDATE | `(SELECT role FROM profiles WHERE id = auth.uid()) = 'admin'` |
 
 ### Binary File Formats
 

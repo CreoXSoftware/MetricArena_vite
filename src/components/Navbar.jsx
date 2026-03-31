@@ -35,6 +35,11 @@ export default function Navbar() {
         <NavLink to="/app/teams" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
           Teams
         </NavLink>
+        {profile?.role === 'admin' && (
+          <NavLink to="/app/admin" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            Admin
+          </NavLink>
+        )}
       </div>
 
       <select

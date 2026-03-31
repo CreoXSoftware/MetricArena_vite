@@ -98,7 +98,12 @@ export default function ProfilePage() {
 
   return (
     <div className="profile-page">
-      <h2 className="profile-page-title">My Profile</h2>
+      <h2 className="profile-page-title">
+        My Profile
+        {authProfile?.is_verified && (
+          <span className="verified-badge verified-badge--lg" title="Verified player"><svg width="20" height="20" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#1d9bf0"/><path d="M4.8 8.2l2 2.1L11.2 6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+        )}
+      </h2>
 
       {/* Account Section */}
       <div className="profile-section">

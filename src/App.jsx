@@ -13,6 +13,7 @@ import TeamDetailPage from './pages/TeamDetailPage';
 import TeamSessionDetailPage from './pages/TeamSessionDetailPage';
 import SessionHistoryPage from './pages/SessionHistoryPage';
 import LeaderboardPage from './pages/LeaderboardPage';
+import AdminPage from './pages/AdminPage';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="sessions" element={<SessionHistoryPage />} />
           <Route path="sessions/team/:teamSessionId" element={<TeamSessionDetailPage />} />
           <Route path="leaderboard" element={<LeaderboardPage />} />
+          <Route path="admin" element={<AdminPage />} />
         </Route>
       </Route>
 

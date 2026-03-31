@@ -327,6 +327,9 @@ export default function SessionHistoryPage() {
                               {summary.source}
                             </span>
                           )}
+                          {s.is_verified && (
+                            <span className="session-verified-badge"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 1L2 4v4c0 3.5 2.5 6.8 6 7.6 3.5-.8 6-4.1 6-7.6V4L8 1z" fill="#1d9bf0"/><path d="M5.3 8.2l1.8 1.8L10.7 6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg> Verified</span>
+                          )}
                         </div>
                       </div>
                       <div className="session-card-badges">

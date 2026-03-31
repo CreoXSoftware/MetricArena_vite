@@ -83,6 +83,8 @@ export default function LeaderboardPage() {
   const [province, setProvince] = useState('');
   const [country, setCountry] = useState('');
 
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+
   // Team filters
   const [teamMetric, setTeamMetric] = useState(TEAM_LEADERBOARD_METRICS[0].value);
   const [teamSessionType, setTeamSessionType] = useState('all');
@@ -115,6 +117,7 @@ export default function LeaderboardPage() {
         positions: positions.length > 0 ? positions : null,
         province: province || null,
         country: country || null,
+        verifiedOnly,
       };
       paramsRef.current = { mode: 'individual', params };
       fetchIndividual(params, true);
@@ -127,12 +130,13 @@ export default function LeaderboardPage() {
         sessionType: teamSessionType,
         dateFrom: teamDateFrom || null,
         dateTo: teamDateTo || null,
+        verifiedOnly,
       };
       paramsRef.current = { mode: 'team', params };
       fetchTeam(params, true);
     }
   }, [viewMode, metric, aggregation, scope, activeSport, sessionType, dateFrom, dateTo,
-      ageMin, ageMax, positions, province, country, teamMetric, teamSessionType,
+      ageMin, ageMax, positions, province, country, verifiedOnly, teamMetric, teamSessionType,
       teamDateFrom, teamDateTo, fetchIndividual, fetchTeam]);
 
   // Fetch on filter change (debounced for text inputs)
@@ -158,6 +162,7 @@ export default function LeaderboardPage() {
     : TEAM_LEADERBOARD_METRICS.find(m => m.value === teamMetric);
 
   const clearFilters = () => {
+    setVerifiedOnly(false);
     if (viewMode === 'individuals') {
       setScope('all');
       setAggregation('best');
@@ -177,8 +182,8 @@ export default function LeaderboardPage() {
   };
 
   const hasActiveFilters = viewMode === 'individuals'
-    ? (scope !== 'all' || aggregation !== 'best' || sessionType !== 'all' || dateFrom || dateTo || ageMin || ageMax || positions.length > 0 || province || country)
-    : (teamSessionType !== 'all' || teamDateFrom || teamDateTo);
+    ? (scope !== 'all' || aggregation !== 'best' || sessionType !== 'all' || dateFrom || dateTo || ageMin || ageMax || positions.length > 0 || province || country || verifiedOnly)
+    : (teamSessionType !== 'all' || teamDateFrom || teamDateTo || verifiedOnly);
 
   // ─── Compare logic ───
   const handleCompare = useCallback(() => {
@@ -401,6 +406,14 @@ export default function LeaderboardPage() {
                 {showMoreFilters ? 'Less filters' : 'More filters'}
               </button>
             )}
+            <button
+              className={`leaderboard-verified-toggle${verifiedOnly ? ' active' : ''}`}
+              onClick={() => setVerifiedOnly(v => !v)}
+              title="Only include verified sessions in rankings"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1L2 4v4c0 3.5 2.5 6.8 6 7.6 3.5-.8 6-4.1 6-7.6V4L8 1z" fill="currentColor"/><path d="M5.3 8.2l1.8 1.8L10.7 6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Verified only
+            </button>
           </div>
 
           {viewMode === 'individuals' && showMoreFilters && (
@@ -514,6 +527,9 @@ export default function LeaderboardPage() {
                         </span>
                       )}
                       {compareType === 'players' ? r.display_name : r.name}
+                      {compareType === 'players' && r.is_verified && (
+                        <span className="verified-badge" title="Verified player"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#1d9bf0"/><path d="M4.8 8.2l2 2.1L11.2 6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+                      )}
                     </span>
                   )}
                 />
@@ -550,6 +566,9 @@ export default function LeaderboardPage() {
                         </span>
                       )}
                       {compareType === 'players' ? r.display_name : r.name}
+                      {compareType === 'players' && r.is_verified && (
+                        <span className="verified-badge" title="Verified player"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#1d9bf0"/><path d="M4.8 8.2l2 2.1L11.2 6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+                      )}
                     </span>
                   )}
                 />
@@ -642,6 +661,9 @@ export default function LeaderboardPage() {
                           <div className="leaderboard-avatar-placeholder">{initial}</div>
                         )}
                         <span className="leaderboard-name">{name || 'Unknown'}</span>
+                        {entry.is_verified && (
+                          <span className="verified-badge" title={viewMode === 'individuals' ? 'Verified player' : 'Verified team'}><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#1d9bf0"/><path d="M4.8 8.2l2 2.1L11.2 6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+                        )}
                         {isMe && <span className="leaderboard-you-badge">You</span>}
                       </div>
                       <div className="leaderboard-value">

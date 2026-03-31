@@ -28,6 +28,7 @@ export function useLeaderboard() {
       p_positions: params.positions || null,
       p_province: params.province || null,
       p_country: params.country || null,
+      p_verified_only: params.verifiedOnly || false,
       p_limit: PAGE_SIZE,
       p_offset: offset ?? 0,
     });
@@ -59,6 +60,7 @@ export function useLeaderboard() {
       p_session_type: params.sessionType === 'all' ? null : (params.sessionType || null),
       p_date_from: params.dateFrom || null,
       p_date_to: params.dateTo || null,
+      p_verified_only: params.verifiedOnly || false,
       p_limit: PAGE_SIZE,
       p_offset: offset ?? 0,
     });
@@ -127,7 +129,7 @@ export function useLeaderboard() {
     if (!query || query.length < 2) return [];
     const { data } = await supabase
       .from('profiles')
-      .select('id, display_name, avatar_url')
+      .select('id, display_name, avatar_url, is_verified')
       .ilike('display_name', `%${query}%`)
       .limit(10);
     return data || [];
@@ -137,7 +139,7 @@ export function useLeaderboard() {
     if (!query || query.length < 2) return [];
     const { data } = await supabase
       .from('teams')
-      .select('id, name, avatar_url, sport')
+      .select('id, name, avatar_url, sport, is_verified')
       .ilike('name', `%${query}%`)
       .limit(10);
     return data || [];
