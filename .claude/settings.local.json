@@ -16,7 +16,12 @@
       "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/MetricArena -type f \\\\\\(-name *.sql -o -name *.md \\\\\\))",
       "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite -type f -name *.md)",
       "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena -type f \\\\\\(-name *.sql -o -name *schema* -o -name *migration* \\\\\\))",
-      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena -path */node_modules -prune -o -type d -name backend -o -type d -name server -o -type d -name api -print)"
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena -path */node_modules -prune -o -type d -name backend -o -type d -name server -o -type d -name api -print)",
+      "Read(//c/Users/nelis/.claude/plugins/cache/caveman/caveman/63e797cd753b/skills/compress/**)",
+      "Read(//c/Users/nelis/.claude/plugins/marketplaces/caveman/caveman-compress/scripts/**)",
+      "Bash(python -m scripts \"c:/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena/CLAUDE.md\")",
+      "Bash(where claude:*)",
+      "Bash(python -c \"import anthropic; print\\('ok'\\)\")"
     ]
   }
 }

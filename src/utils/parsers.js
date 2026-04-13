@@ -49,10 +49,79 @@ export function parseBinary(buffer, version) {
   return rows;
 }
 
+// Matches sensor CSV lines: [optional $]HH:MM:SS.mmm,<values>*
+const SENSOR_CSV_RE = /^\$?\d{2}:\d{2}:\d{2}\.\d{3},/;
+
+/**
+ * Parse sensor CSV (no header): [$]HH:MM:SS.mmm,ax,ay,az,lat,lon,speed_knots*
+ * Date defaults to today (UTC). kernelTick = ms offset from first row.
+ * No gyro: gravity vector is derived from LPF of accel in processSession
+ * (gyro rotation skipped when theta<=1e-9, complementary filter acts as LPF).
+ */
+export function parseSensorCSV(text) {
+  const lines = text.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth() + 1;
+  const day = now.getUTCDate();
+  let baseMs = null;
+  const rows = [];
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim().replace(/\*$/, '');
+    if (!line || !SENSOR_CSV_RE.test(line)) continue;
+    const parts = line.split(',');
+    if (parts.length < 7) continue;
+
+    const timeParts = parts[0].replace(/^\$/, '').split(':');
+    const hour = parseInt(timeParts[0], 10);
+    const minute = parseInt(timeParts[1], 10);
+    const secParts = timeParts[2].split('.');
+    const second = parseInt(secParts[0], 10);
+    const millisecond = parseInt(secParts[1] || '0', 10);
+
+    const rowMs = (hour * 3600 + minute * 60 + second) * 1000 + millisecond;
+    if (baseMs === null) baseMs = rowMs;
+
+    rows.push({
+      kernelTick: rowMs - baseMs,
+      year, month, day,
+      hour, minute, second, millisecond,
+      accel_x: parseFloat(parts[1]),
+      accel_y: parseFloat(parts[2]),
+      accel_z: parseFloat(parts[3]),
+      latitude: parseFloat(parts[4]),
+      longitude: parseFloat(parts[5]),
+      speed_kph: parseFloat(parts[6]) * 1.852,
+    });
+  }
+
+  if (rows.length === 0) throw new Error('No valid records found in sensor CSV');
+
+  // Auto-detect accel units: if mean magnitude of first N samples ≈ 1, data is g-force → scale to m/s²
+  const probeN = Math.min(50, rows.length);
+  let magSum = 0;
+  for (let i = 0; i < probeN; i++) {
+    const r = rows[i];
+    magSum += Math.sqrt(r.accel_x * r.accel_x + r.accel_y * r.accel_y + r.accel_z * r.accel_z);
+  }
+  const meanMag = magSum / probeN;
+  if (meanMag > 0.3 && meanMag < 3) {
+    const G = 9.80665;
+    for (const r of rows) { r.accel_x *= G; r.accel_y *= G; r.accel_z *= G; }
+  }
+
+  return rows;
+}
+
 /**
  * Parse a CSV string into session rows.
+ * Auto-detects sensor CSV format (no header, HH:MM:SS.mmm timestamp).
  */
 export function parseCSV(text) {
+  const firstLine = text.trimStart().split(/\r?\n/)[0] || '';
+  if (SENSOR_CSV_RE.test(firstLine.trim())) return parseSensorCSV(text);
+
   const lines = text.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const headers = lines[0].split(',').map(h => h.trim());
   const rows = [];
