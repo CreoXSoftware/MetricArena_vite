@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena -maxdepth 2 -type f \\\\\\(-name *.config.* -o -name tsconfig* -o -name .env* -o -name eslint* -o -name .* \\\\\\) ! -path */node_modules/*)",
+      "Bash(xargs -I {} basename {})",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx eslint:*)",
+      "Bash(grep -r \"role\\\\|visibility\\\\|team\\\\|coach\" c:/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena/src --include=*.jsx --include=*.js)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena/src -type f -name *logo* -o -name *brand* -o -name *favicon*)",
+      "Bash(find c:UsersnelisDocumentsCreoXMetricAthletemetric-arena-vitemetric-arena -type f -name *.md -o -name schema* -o -name *database*)",
+      "Bash(xargs grep:*)",
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/MetricArena -type f \\\\\\(-name *.sql -o -name *.md \\\\\\))",
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite -type f -name *.md)",
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena -type f \\\\\\(-name *.sql -o -name *schema* -o -name *migration* \\\\\\))",
+      "Bash(find /c/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena -path */node_modules -prune -o -type d -name backend -o -type d -name server -o -type d -name api -print)",
+      "Read(//c/Users/nelis/.claude/plugins/cache/caveman/caveman/63e797cd753b/skills/compress/**)",
+      "Read(//c/Users/nelis/.claude/plugins/marketplaces/caveman/caveman-compress/scripts/**)",
+      "Bash(python -m scripts \"c:/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena/CLAUDE.md\")",
+      "Bash(where claude:*)",
+      "Bash(python -c \"import anthropic; print\\('ok'\\)\")"
+    ]
+  }
+}
