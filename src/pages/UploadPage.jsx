@@ -149,9 +149,13 @@ export default function UploadPage({ onClose } = {}) {
 
       const data = processSession(pendingRows);
       const metrics = computeMetrics(data, effectiveProfile, effectiveThresholds);
-      const startUtc = rowToUTCDate(pendingRows[0]);
-      const endUtc = rowToUTCDate(pendingRows[pendingRows.length - 1]);
-      const durationSec = Math.max(0, (endUtc - startUtc) / 1000);
+      const rawStartUtc = rowToUTCDate(pendingRows[0]);
+      const rawEndUtc = rowToUTCDate(pendingRows[pendingRows.length - 1]);
+      const validDates = !Number.isNaN(rawStartUtc.getTime()) && !Number.isNaN(rawEndUtc.getTime());
+      const startUtc = validDates ? rawStartUtc : new Date();
+      const durationSec = validDates
+        ? Math.max(0, (rawEndUtc - rawStartUtc) / 1000)
+        : (data[data.length - 1]?.t || 0);
 
       // Upload raw file to Supabase Storage (stored under uploader's path for storage RLS)
       let filePath = null;
@@ -213,6 +217,7 @@ export default function UploadPage({ onClose } = {}) {
     const last = pendingRows[pendingRows.length - 1];
     const startUtc = rowToUTCDate(first);
     const endUtc = rowToUTCDate(last);
+    if (Number.isNaN(startUtc.getTime()) || Number.isNaN(endUtc.getTime())) return null;
     const durationSec = Math.max(0, (endUtc - startUtc) / 1000);
     return { startUtc, endUtc, durationSec };
   }, [pendingRows]);

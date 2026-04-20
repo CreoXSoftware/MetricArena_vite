@@ -201,7 +201,7 @@ function renderSpeedZones(doc, y, metrics, thresholds, pw) {
   doc.setFont(undefined, 'normal');
   const legendParts = zones.map((z, i) => {
     const pct = ((z / total) * 100).toFixed(1);
-    return `${names[i]} km/h — ${formatDuration(z)} (${pct}%)`;
+    return `${names[i]} m/s — ${formatDuration(z)} (${pct}%)`;
   });
   doc.text(legendParts.join('   |   '), 14, y);
   return y + 6;
@@ -273,7 +273,7 @@ export async function exportSessionPDF(processedData, profile, metrics, threshol
   const m = metrics;
   const cards = [
     { label: 'Max Speed', value: m.maxSpeedMs.toFixed(2), unit: 'm/s' },
-    { label: 'Avg Speed (moving)', value: (m.avgSpeed / 3.6).toFixed(2), unit: 'm/s' },
+    { label: 'Avg Speed (moving)', value: m.avgSpeed.toFixed(2), unit: 'm/s' },
     { label: 'Max Acceleration', value: m.maxAccel.toFixed(1), unit: 'm/s²' },
     { label: 'Max Deceleration', value: m.maxDecel.toFixed(1), unit: 'm/s²' },
     { label: 'Avg Acceleration', value: m.avgAccel.toFixed(2), unit: 'm/s²' },
@@ -285,8 +285,8 @@ export async function exportSessionPDF(processedData, profile, metrics, threshol
     { label: 'Duration', value: formatDuration(m.duration), unit: '' },
     { label: 'Time Moving', value: formatDuration(m.timeMoving), unit: '' },
     { label: 'Time Stationary', value: formatDuration(m.timeStationary), unit: '' },
-    { label: `Sprints (>${T.sprintSpeed} km/h)`, value: String(m.sprints), unit: '' },
-    { label: `Runs (>${T.runSpeed} km/h)`, value: String(m.runs), unit: '' },
+    { label: `Sprints (>${T.sprintSpeed} m/s)`, value: String(m.sprints), unit: '' },
+    { label: `Runs (>${T.runSpeed} m/s)`, value: String(m.runs), unit: '' },
     { label: `Impacts (>${T.impactThresh} m/s²)`, value: String(m.impacts), unit: '' },
     { label: 'Peak Force', value: m.peakForce.toFixed(0), unit: 'N', sec: true },
     { label: 'Avg Force (moving)', value: m.avgForce.toFixed(0), unit: 'N', sec: true },
@@ -317,7 +317,7 @@ export async function exportSessionPDF(processedData, profile, metrics, threshol
         formatDuration(sm.duration),
         sm.totalDist.toFixed(0) + ' m',
         sm.maxSpeedMs.toFixed(2) + ' m/s',
-        (sm.avgSpeed / 3.6).toFixed(2) + ' m/s',
+        sm.avgSpeed.toFixed(2) + ' m/s',
         String(sm.sprints),
         String(sm.impacts),
         sm.playerLoad.toFixed(0) + ' au',
@@ -352,7 +352,7 @@ export async function exportTeamSessionPDF(teamSessionName, sessionDate, aggrega
     const push = (label, val, unit) => { if (val != null) aCards.push({ label, value: val, unit }); };
     push('Players', String(aggregate.playerCount), '');
     push('Total Distance', (aggregate.totalDist / 1000).toFixed(2), 'km');
-    push('Avg Speed', (aggregate.avgSpeed / 3.6).toFixed(2), 'm/s');
+    push('Avg Speed', aggregate.avgSpeed.toFixed(2), 'm/s');
     push('Max Speed', aggregate.maxSpeedMs.toFixed(2), 'm/s');
     push('Avg Max Accel', aggregate.avgMaxAccel?.toFixed(1), 'm/s²');
     push('Avg Max Decel', aggregate.avgMaxDecel?.toFixed(1), 'm/s²');
@@ -380,7 +380,7 @@ export async function exportTeamSessionPDF(teamSessionName, sessionDate, aggrega
       return [
         s.playerProfile?.display_name || 'Unknown',
         m?.maxSpeedMs != null ? m.maxSpeedMs.toFixed(2) + ' m/s' : '—',
-        m?.avgSpeed != null ? (m.avgSpeed / 3.6).toFixed(2) + ' m/s' : '—',
+        m?.avgSpeed != null ? m.avgSpeed.toFixed(2) + ' m/s' : '—',
         m?.totalDist != null ? (m.totalDist / 1000).toFixed(2) + ' km' : '—',
         m?.duration != null ? formatDuration(m.duration) : '—',
         m?.sprints != null ? String(m.sprints) : '—',
@@ -421,7 +421,7 @@ export async function exportPlayerTeamSessionPDF(teamSessionName, sessionDate, a
     const push = (label, val, unit) => { if (val != null) aCards.push({ label, value: val, unit }); };
     push('Players', String(aggregate.playerCount), '');
     push('Total Distance', (aggregate.totalDist / 1000).toFixed(2), 'km');
-    push('Avg Speed', (aggregate.avgSpeed / 3.6).toFixed(2), 'm/s');
+    push('Avg Speed', aggregate.avgSpeed.toFixed(2), 'm/s');
     push('Max Speed', aggregate.maxSpeedMs.toFixed(2), 'm/s');
     push('Total Sprints', String(aggregate.totalSprints), '');
     push('Total Impacts', String(aggregate.totalImpacts), '');
@@ -436,8 +436,8 @@ export async function exportPlayerTeamSessionPDF(teamSessionName, sessionDate, a
   if (m) {
     y = sectionTitle(doc, y, `${playerName} — Detailed Metrics (${summary.source})`, pw);
     const cards = [
-      { label: 'Max Speed', value: (m.maxSpeedMs ?? m.maxSpeed / 3.6).toFixed(2), unit: 'm/s' },
-      { label: 'Avg Speed', value: (m.avgSpeed / 3.6).toFixed(2), unit: 'm/s' },
+      { label: 'Max Speed', value: (m.maxSpeedMs ?? m.maxSpeed).toFixed(2), unit: 'm/s' },
+      { label: 'Avg Speed', value: m.avgSpeed.toFixed(2), unit: 'm/s' },
       { label: 'Max Acceleration', value: m.maxAccel?.toFixed(1), unit: 'm/s²' },
       { label: 'Avg Acceleration', value: m.avgAccel?.toFixed(2), unit: 'm/s²' },
       { label: 'Max Deceleration', value: m.maxDecel?.toFixed(1), unit: 'm/s²' },

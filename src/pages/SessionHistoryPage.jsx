@@ -346,7 +346,7 @@ export default function SessionHistoryPage() {
                         <div className="session-card-metric">
                           <span className="session-card-metric-label">Max spd</span>
                           <span className="session-card-metric-value">
-                            {m.maxSpeedMs != null ? m.maxSpeedMs.toFixed(2) : (m.maxSpeed / 3.6).toFixed(2)}
+                            {(m.maxSpeedMs ?? m.maxSpeed).toFixed(2)}
                           </span>
                           <span className="session-card-metric-unit">m/s</span>
                         </div>
@@ -354,7 +354,7 @@ export default function SessionHistoryPage() {
                       {m.avgSpeed != null && (
                         <div className="session-card-metric">
                           <span className="session-card-metric-label">Avg spd</span>
-                          <span className="session-card-metric-value">{(m.avgSpeed / 3.6).toFixed(2)}</span>
+                          <span className="session-card-metric-value">{m.avgSpeed.toFixed(2)}</span>
                           <span className="session-card-metric-unit">m/s</span>
                         </div>
                       )}
@@ -579,7 +579,7 @@ export default function SessionHistoryPage() {
                             {ts.aggregateMetrics.avgSpeed != null && (
                               <div className="session-card-metric">
                                 <span className="session-card-metric-label">Avg speed</span>
-                                <span className="session-card-metric-value">{(ts.aggregateMetrics.avgSpeed / 3.6).toFixed(2)}</span>
+                                <span className="session-card-metric-value">{ts.aggregateMetrics.avgSpeed.toFixed(2)}</span>
                                 <span className="session-card-metric-unit">m/s</span>
                               </div>
                             )}

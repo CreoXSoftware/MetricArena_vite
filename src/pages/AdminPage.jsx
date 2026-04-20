@@ -245,7 +245,7 @@ export default function AdminPage() {
                 {filteredSessions.map(s => {
                   const date = new Date(s.session_date);
                   const m = s.metrics || {};
-                  const maxSpd = m.maxSpeedMs != null ? m.maxSpeedMs.toFixed(2) : (m.maxSpeed != null ? (m.maxSpeed / 3.6).toFixed(2) : null);
+                  const maxSpd = (m.maxSpeedMs ?? m.maxSpeed) != null ? (m.maxSpeedMs ?? m.maxSpeed).toFixed(2) : null;
                   const dist = m.totalDist != null ? (m.totalDist / 1000).toFixed(2) : null;
                   return (
                     <div key={s.id} className="admin-list-item">

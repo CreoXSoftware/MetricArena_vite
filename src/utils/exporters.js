@@ -1,7 +1,7 @@
 import { computeMetrics } from './metrics';
 
 const METRIC_UNITS = {
-  maxSpeed: 'km/h', maxSpeedMs: 'm/s', avgSpeed: 'km/h',
+  maxSpeed: 'm/s', maxSpeedMs: 'm/s', avgSpeed: 'm/s',
   maxAccel: 'm/s²', avgAccel: 'm/s²', maxDecel: 'm/s²',
   totalDist: 'm', distToMax: 'm', sprintDist: 'm', highSpeedDist: 'm',
   duration: 's', timeToMax: 's', sprintTime: 's', timeMoving: 's', timeStationary: 's',
@@ -28,9 +28,9 @@ export function exportMetricsJSON(processedData, profile, thresholds, splits) {
     units: {
       profile: { weight: 'kg', height: 'cm', age: 'yr', maxHR: 'bpm', vo2max: 'mL/kg/min' },
       thresholds: {
-        sprintSpeed: 'km/h', sprintHyst: 'km/h', runSpeed: 'km/h', runHyst: 'km/h',
-        highSpeedThresh: 'km/h', impactThresh: 'm/s²', impactBase: 'm/s²',
-        movingThresh: 'km/h', zone1: 'km/h', zone2: 'km/h', zone3: 'km/h', zone4: 'km/h'
+        sprintSpeed: 'm/s', sprintHyst: 'm/s', runSpeed: 'm/s', runHyst: 'm/s',
+        highSpeedThresh: 'm/s', impactThresh: 'm/s²', impactBase: 'm/s²',
+        movingThresh: 'm/s', zone1: 'm/s', zone2: 'm/s', zone3: 'm/s', zone4: 'm/s'
       },
       metrics: METRIC_UNITS
     },
@@ -145,7 +145,7 @@ export function exportGPX(processedData) {
   processedData.forEach(p => {
     const lat = (isFinite(p.lat) ? p.lat : 0).toFixed(7);
     const lon = (isFinite(p.lon) ? p.lon : 0).toFixed(7);
-    const speedMs = (isFinite(p.speed) ? p.speed / 3.6 : 0).toFixed(4);
+    const speedMs = (isFinite(p.speed) ? p.speed : 0).toFixed(4);
     lines.push(`      <trkpt lat="${lat}" lon="${lon}">`);
     lines.push(`        <time>${p.ts.toISOString()}</time>`);
     if (hasGPS) {

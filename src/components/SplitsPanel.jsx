@@ -102,8 +102,8 @@ export default function SplitsPanel({ splits, profile, thresholds, onDelete, onR
                 </div>
               )}
               <div className="split-metrics">
-                <SplitMetric label="Max Speed" value={(m.maxSpeedMs ?? m.maxSpeed / 3.6).toFixed(2) + ' m/s'} />
-                <SplitMetric label="Avg Speed" value={(m.avgSpeed / 3.6).toFixed(2) + ' m/s'} />
+                <SplitMetric label="Max Speed" value={(m.maxSpeedMs ?? m.maxSpeed).toFixed(2) + ' m/s'} />
+                <SplitMetric label="Avg Speed" value={m.avgSpeed.toFixed(2) + ' m/s'} />
                 <SplitMetric label="Max Accel" value={m.maxAccel.toFixed(1) + ' m/s²'} />
                 <SplitMetric label="Avg Accel" value={m.avgAccel.toFixed(2) + ' m/s²'} />
                 <SplitMetric label="Max Decel" value={m.maxDecel.toFixed(1) + ' m/s²'} />
@@ -115,8 +115,8 @@ export default function SplitsPanel({ splits, profile, thresholds, onDelete, onR
                 <SplitMetric label="Duration" value={formatDuration(m.duration)} />
                 <SplitMetric label="Time Moving" value={formatDuration(m.timeMoving)} />
                 <SplitMetric label="Time Stationary" value={formatDuration(m.timeStationary)} />
-                <SplitMetric label={`Sprints (>${T.sprintSpeed} km/h)`} value={m.sprints} />
-                <SplitMetric label={`Runs (>${T.runSpeed} km/h)`} value={m.runs} />
+                <SplitMetric label={`Sprints (>${T.sprintSpeed} m/s)`} value={m.sprints} />
+                <SplitMetric label={`Runs (>${T.runSpeed} m/s)`} value={m.runs} />
                 <SplitMetric label={`Impacts (>${T.impactThresh} m/s²)`} value={m.impacts} />
                 <SplitMetric label="Peak Force" value={m.peakForce.toFixed(0) + ' N'} />
                 <SplitMetric label="Avg Force" value={m.avgForce.toFixed(0) + ' N'} />

@@ -1,5 +1,9 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { formatDuration } from '../utils/format';
+
+function formatClock(date) {
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
 
 // ========== Shared helpers ==========
 function setupCanvas(canvas, container) {
@@ -124,7 +128,7 @@ export function SpeedChart({ data, chartView, thresholds, onZoom }) {
 
     // Y-axis (m/s)
     ctx.fillStyle = '#8888a0'; ctx.font = '11px JetBrains Mono, monospace'; ctx.textAlign = 'right';
-    for (let i = 0; i <= 5; i++) ctx.fillText(((maxS / 5 * (5 - i)) / 3.6).toFixed(1), pad.left - 8, pad.top + (cH / 5) * i + 4);
+    for (let i = 0; i <= 5; i++) ctx.fillText((maxS / 5 * (5 - i)).toFixed(1), pad.left - 8, pad.top + (cH / 5) * i + 4);
     // X-axis
     ctx.textAlign = 'center';
     for (let i = 0; i <= 4; i++) {
@@ -189,7 +193,7 @@ export function SpeedChart({ data, chartView, thresholds, onZoom }) {
       ctx.beginPath(); ctx.moveTo(px, si.pad.top); ctx.lineTo(px, si.pad.top + si.cH); ctx.stroke();
       ctx.setLineDash([]);
       ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fillStyle = '#00b8ff'; ctx.fill();
-      const lines = [(pt.speed / 3.6).toFixed(2) + ' m/s', formatDuration(pt.t)];
+      const lines = [pt.speed.toFixed(2) + ' m/s', formatDuration(pt.t)];
       const colors = ['#00b8ff', '#8888a0'];
       let bx = px + 10, by = py - 10;
       ctx.font = '11px JetBrains Mono, monospace';
@@ -246,7 +250,7 @@ function drawSplitOverlays(ctx, ai, allSplits, selectedSplitId, previewEdge) {
   edgeSplits.forEach((s, i) => {
     const color = SPLIT_COLORS[i % SPLIT_COLORS.length];
     const ts = previewEdge?.splitId === s.id && previewEdge.edge === 'start' ? previewEdge.time : s.tStart;
-    const te = previewEdge?.splitId === s.id && previewEdge.edge === 'end'   ? previewEdge.time : s.tEnd;
+    const te = previewEdge?.splitId === s.id && previewEdge.edge === 'end' ? previewEdge.time : s.tEnd;
     const x1 = tToX(ts);
     const x2 = tToX(te);
 
@@ -285,7 +289,7 @@ function findHoveredEdge(clientX, canvasRect, ai, allSplits, selectedSplitId) {
   const tToX = t => ai.pad.left + ((t - ai.tStart) / (ai.tEnd - ai.tStart)) * ai.cW;
   for (const s of getEdgeSplits(allSplits, selectedSplitId)) {
     if (Math.abs(x - tToX(s.tStart)) <= EDGE_HIT_PX) return { splitId: s.id, edge: 'start' };
-    if (Math.abs(x - tToX(s.tEnd))   <= EDGE_HIT_PX) return { splitId: s.id, edge: 'end' };
+    if (Math.abs(x - tToX(s.tEnd)) <= EDGE_HIT_PX) return { splitId: s.id, edge: 'end' };
   }
   return null;
 }
@@ -304,6 +308,17 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
   const selectedSplitIdRef = useRef(selectedSplitId);
   useEffect(() => { splitsRef.current = splits; }, [splits]);
   useEffect(() => { selectedSplitIdRef.current = selectedSplitId; }, [selectedSplitId]);
+
+  const [xMode, setXMode] = useState('clock'); // 'elapsed' | 'clock'
+  const startMs = useMemo(() => {
+    const ts = data?.[0]?.ts;
+    return ts instanceof Date ? ts.getTime() : (typeof ts === 'number' ? ts : null);
+  }, [data]);
+  const hasClock = startMs != null && !Number.isNaN(startMs);
+  const fmtX = useCallback((t) => {
+    if (xMode === 'clock' && hasClock) return formatClock(new Date(startMs + t * 1000));
+    return formatDuration(t);
+  }, [xMode, hasClock, startMs]);
 
   const render = useCallback(() => {
     const canvas = canvasRef.current;
@@ -384,7 +399,7 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
     ctx.fillStyle = '#8888a0'; ctx.textAlign = 'center';
     for (let i = 0; i <= 4; i++) {
       const t = tStart + (tRange / 4) * i;
-      ctx.fillText(formatDuration(t), tToX(t), H - 6);
+      ctx.fillText(fmtX(t), tToX(t), H - 6);
     }
 
     baseImageRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -392,7 +407,7 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
       drawSplitOverlays(ctx, infoRef.current, splits, selectedSplitId, null);
     }
     imageRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  }, [data, chartView, thresholds, splits, selectedSplitId]);
+  }, [data, chartView, thresholds, splits, selectedSplitId, fmtX]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -537,7 +552,7 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
       ctx.setLineDash([]);
       ctx.beginPath(); ctx.arc(px, pyA, 4, 0, Math.PI * 2); ctx.fillStyle = '#00e5a0'; ctx.fill();
       ctx.beginPath(); ctx.arc(px, pyS, 4, 0, Math.PI * 2); ctx.fillStyle = '#00b8ff'; ctx.fill();
-      const lines = [pt.linMag.toFixed(1) + ' m/s²', (pt.speed / 3.6).toFixed(2) + ' m/s', formatDuration(pt.t)];
+      const lines = [pt.linMag.toFixed(1) + ' m/s²', pt.speed.toFixed(2) + ' m/s', fmtX(pt.t)];
       const clrs = ['#00e5a0', '#00b8ff', '#8888a0'];
       ctx.font = '11px JetBrains Mono, monospace';
       const bW = Math.max(...lines.map(l => ctx.measureText(l).width)) + 16;
@@ -568,13 +583,33 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
       document.removeEventListener('mousemove', handleDocMove);
       document.removeEventListener('mouseup', handleDocUp);
     };
-  }, [data, onSelection, onSplitResize]);
+  }, [data, onSelection, onSplitResize, fmtX]);
 
   return (
     <div className="section">
-      <div className="section-title">
+      <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span className="dot" style={{ background: 'var(--accent)' }}></span>
-        Acceleration (gravity-corrected via gyro) — Drag to select splits
+        <span>Acceleration (gravity-corrected via gyro) — Drag to select splits</span>
+        {hasClock && (
+          <button
+            type="button"
+            onClick={() => setXMode(m => m === 'elapsed' ? 'clock' : 'elapsed')}
+            title={xMode === 'elapsed' ? 'Switch X-axis to local clock time' : 'Switch X-axis to elapsed time'}
+            style={{
+              marginLeft: 'auto',
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 11,
+              padding: '3px 8px',
+              borderRadius: 6,
+              cursor: 'pointer',
+            }}
+          >
+            {xMode === 'elapsed' ? 'Elapsed' : 'Clock'}
+          </button>
+        )}
       </div>
       <div className="accel-chart-container" ref={containerRef}>
         <canvas ref={canvasRef}></canvas>

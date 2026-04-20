@@ -8,7 +8,7 @@ export default function MetricsGrid({ metrics, thresholds }) {
 
   const cards = [
     { label: 'Max Speed', value: m.maxSpeedMs.toFixed(2), unit: 'm/s' },
-    { label: 'Avg Speed (moving)', value: (m.avgSpeed / 3.6).toFixed(2), unit: 'm/s' },
+    { label: 'Avg Speed (moving)', value: m.avgSpeed.toFixed(2), unit: 'm/s' },
     { label: 'Max Acceleration', value: m.maxAccel.toFixed(1), unit: 'm/s²' },
     { label: 'Max Deceleration', value: m.maxDecel.toFixed(1), unit: 'm/s²' },
     { label: 'Avg Acceleration', value: m.avgAccel.toFixed(2), unit: 'm/s²' },
@@ -20,8 +20,8 @@ export default function MetricsGrid({ metrics, thresholds }) {
     { label: 'Duration', value: formatDuration(m.duration), unit: '' },
     { label: 'Time Moving', value: formatDuration(m.timeMoving), unit: '' },
     { label: 'Time Stationary', value: formatDuration(m.timeStationary), unit: '' },
-    { label: `Sprints (>${T.sprintSpeed} km/h)`, value: String(m.sprints), unit: '' },
-    { label: `Runs (>${T.runSpeed} km/h)`, value: String(m.runs), unit: '' },
+    { label: `Sprints (>${T.sprintSpeed} m/s)`, value: String(m.sprints), unit: '' },
+    { label: `Runs (>${T.runSpeed} m/s)`, value: String(m.runs), unit: '' },
     { label: `Impacts (>${T.impactThresh} m/s²)`, value: String(m.impacts), unit: '' },
   ];
 

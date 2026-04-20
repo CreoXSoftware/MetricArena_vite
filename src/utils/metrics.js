@@ -2,18 +2,18 @@
  * Default threshold definitions and values.
  */
 export const thresholdDefs = [
-  { id: 'sprintSpeed', label: 'Sprint Speed', unit: 'km/h', min: 10, max: 35, step: 0.5, default: 20 },
-  { id: 'sprintHyst', label: 'Sprint Hysteresis (off)', unit: 'km/h', min: 5, max: 30, step: 0.5, default: 18 },
-  { id: 'runSpeed', label: 'Run Speed', unit: 'km/h', min: 4, max: 20, step: 0.5, default: 8 },
-  { id: 'runHyst', label: 'Run Hysteresis (off)', unit: 'km/h', min: 2, max: 15, step: 0.5, default: 5 },
-  { id: 'highSpeedThresh', label: 'High-Speed Zone', unit: 'km/h', min: 8, max: 30, step: 0.5, default: 15 },
-  { id: 'impactThresh', label: 'Impact Threshold', unit: 'm/s²', min: 2, max: 100, step: 0.5, default: 5 },
-  { id: 'impactBase', label: 'Impact Baseline (below)', unit: 'm/s²', min: 1, max: 100, step: 0.5, default: 3 },
-  { id: 'movingThresh', label: 'Moving Threshold', unit: 'km/h', min: 0.5, max: 5, step: 0.1, default: 1 },
-  { id: 'zone1', label: 'Speed Zone 1 Upper', unit: 'km/h', min: 1, max: 10, step: 0.5, default: 5 },
-  { id: 'zone2', label: 'Speed Zone 2 Upper', unit: 'km/h', min: 5, max: 18, step: 0.5, default: 10 },
-  { id: 'zone3', label: 'Speed Zone 3 Upper', unit: 'km/h', min: 10, max: 25, step: 0.5, default: 15 },
-  { id: 'zone4', label: 'Speed Zone 4 Upper', unit: 'km/h', min: 15, max: 35, step: 0.5, default: 20 },
+  { id: 'sprintSpeed', label: 'Sprint Speed', unit: 'm/s', min: 3, max: 10, step: 0.1, default: 5.5 },
+  { id: 'sprintHyst', label: 'Sprint Hysteresis (off)', unit: 'm/s', min: 1.5, max: 8, step: 0.1, default: 5 },
+  { id: 'runSpeed', label: 'Run Speed', unit: 'm/s', min: 1, max: 6, step: 0.1, default: 2.2 },
+  { id: 'runHyst', label: 'Run Hysteresis (off)', unit: 'm/s', min: 0.5, max: 4, step: 0.1, default: 1.4 },
+  { id: 'highSpeedThresh', label: 'High-Speed Zone', unit: 'm/s', min: 2, max: 8, step: 0.1, default: 4.2 },
+  { id: 'impactThresh', label: 'Impact Threshold', unit: 'm/s²', min: 2, max: 100, step: 0.5, default: 40 },
+  { id: 'impactBase', label: 'Impact Baseline (below)', unit: 'm/s²', min: 1, max: 100, step: 0.5, default: 10 },
+  { id: 'movingThresh', label: 'Moving Threshold', unit: 'm/s', min: 0.1, max: 1.5, step: 0.05, default: 0.3 },
+  { id: 'zone1', label: 'Speed Zone 1 Upper', unit: 'm/s', min: 0.3, max: 3, step: 0.1, default: 1.4 },
+  { id: 'zone2', label: 'Speed Zone 2 Upper', unit: 'm/s', min: 1.5, max: 5, step: 0.1, default: 2.8 },
+  { id: 'zone3', label: 'Speed Zone 3 Upper', unit: 'm/s', min: 3, max: 7, step: 0.1, default: 4.2 },
+  { id: 'zone4', label: 'Speed Zone 4 Upper', unit: 'm/s', min: 4, max: 10, step: 0.1, default: 5.5 },
 ];
 
 export function getDefaultThresholds() {
@@ -35,7 +35,7 @@ export function computeMetrics(data, profile, thresholds) {
 
   const speeds = data.map(d => d.speed);
   const maxSpeed = Math.max(...speeds);
-  const maxSpeedMs = maxSpeed / 3.6;
+  const maxSpeedMs = maxSpeed;
 
   const accels = data.map(d => d.linMag);
   const maxAccel = Math.max(...accels);
@@ -108,7 +108,7 @@ export function computeMetrics(data, profile, thresholds) {
   // Peak Power
   let peakPower = 0;
   for (let i = 0; i < data.length; i++) {
-    const pw = mass * data[i].linMag * (data[i].speed / 3.6);
+    const pw = mass * data[i].linMag * data[i].speed;
     if (pw > peakPower) peakPower = pw;
   }
 
@@ -117,7 +117,7 @@ export function computeMetrics(data, profile, thresholds) {
   let movingCount = 0;
   for (let i = 0; i < data.length; i++) {
     if (data[i].speed > T.movingThresh) {
-      avgPower += mass * data[i].linMag * (data[i].speed / 3.6);
+      avgPower += mass * data[i].linMag * data[i].speed;
       movingCount++;
     }
   }
@@ -130,12 +130,12 @@ export function computeMetrics(data, profile, thresholds) {
     if (dt <= 0 || dt > 2) continue;
     const spd = data[i].speed;
     let met;
-    if (spd < 1) met = 1.2;
-    else if (spd < 5) met = 3.5;
-    else if (spd < 8) met = 6.0;
-    else if (spd < 12) met = 9.0;
-    else if (spd < 16) met = 11.0;
-    else if (spd < 20) met = 13.5;
+    if (spd < 0.28) met = 1.2;
+    else if (spd < 1.39) met = 3.5;
+    else if (spd < 2.22) met = 6.0;
+    else if (spd < 3.33) met = 9.0;
+    else if (spd < 4.44) met = 11.0;
+    else if (spd < 5.56) met = 13.5;
     else met = 16.0;
     totalCal += met * 3.5 * mass / 12000 * dt;
   }
@@ -153,7 +153,7 @@ export function computeMetrics(data, profile, thresholds) {
   // Max deceleration
   let maxDecel = 0;
   for (let i = 1; i < data.length; i++) {
-    const dv = (data[i].speed - data[i - 1].speed) / 3.6;
+    const dv = data[i].speed - data[i - 1].speed;
     const dt = data[i].t - data[i - 1].t;
     if (dt > 0) {
       const decel = -dv / dt;

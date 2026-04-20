@@ -23,9 +23,8 @@ export function computeTeamAggregate(sessions) {
     return valid.length ? valid.reduce((acc, m) => acc + m[key], 0) / valid.length : null;
   };
 
-  // Normalize max speed to m/s (maxSpeedMs is m/s, maxSpeed is km/h legacy)
   const speedsMs = metricsList
-    .map(m => m.maxSpeedMs ?? (m.maxSpeed != null ? m.maxSpeed / 3.6 : null))
+    .map(m => m.maxSpeedMs ?? m.maxSpeed ?? null)
     .filter(v => v != null);
 
   return {

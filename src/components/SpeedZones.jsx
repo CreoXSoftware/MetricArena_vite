@@ -40,7 +40,7 @@ export default function SpeedZones({ metrics, thresholds }) {
                 display: 'inline-block', width: '10px', height: '10px', borderRadius: '3px',
                 background: colors[i], verticalAlign: 'middle', marginRight: '4px'
               }}></span>
-              {names[i]} km/h — {formatDuration(z)} ({pct.toFixed(1)}%)
+              {names[i]} m/s — {formatDuration(z)} ({pct.toFixed(1)}%)
             </span>
           );
         })}

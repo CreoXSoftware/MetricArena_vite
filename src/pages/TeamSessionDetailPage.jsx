@@ -51,8 +51,8 @@ function exportPlayerSessionCSV(teamSessionName, sessionDate, s) {
     ['Session', teamSessionName || ''],
     ['Date', sessionDate || ''],
     ['Source', summary.source],
-    ['Max Speed', `${(m.maxSpeedMs ?? m.maxSpeed / 3.6).toFixed(2)} m/s`],
-    ['Avg Speed', `${(m.avgSpeed / 3.6).toFixed(2)} m/s`],
+    ['Max Speed', `${(m.maxSpeedMs ?? m.maxSpeed).toFixed(2)} m/s`],
+    ['Avg Speed', `${m.avgSpeed.toFixed(2)} m/s`],
     ['Max Accel', m.maxAccel != null ? `${m.maxAccel.toFixed(1)} m/s²` : '—'],
     ['Avg Accel', m.avgAccel != null ? `${m.avgAccel.toFixed(2)} m/s²` : '—'],
     ['Max Decel', m.maxDecel != null ? `${m.maxDecel.toFixed(1)} m/s²` : '—'],
@@ -91,7 +91,7 @@ function getSummaryMetrics(session) {
 
 const SUMMARY_COLS = [
   { label: 'Max Speed', key: 'maxSpeedMs', fmt: v => v != null ? v.toFixed(2) + ' m/s' : '—' },
-  { label: 'Avg Speed', key: 'avgSpeed', fmt: v => v != null ? (v / 3.6).toFixed(2) + ' m/s' : '—' },
+  { label: 'Avg Speed', key: 'avgSpeed', fmt: v => v != null ? v.toFixed(2) + ' m/s' : '—' },
   { label: 'Distance', key: 'totalDist', fmt: v => v != null ? (v / 1000).toFixed(2) + ' km' : '—' },
   { label: 'Duration', key: 'duration', fmt: v => v != null ? formatDuration(v) : '—' },
   { label: 'Sprints', key: 'sprints', fmt: v => v != null ? String(v) : '—' },
@@ -297,7 +297,7 @@ export default function TeamSessionDetailPage() {
                 {aggregate.avgSpeed != null && (
                   <div className="split-metric">
                     <span className="sm-label">Avg Speed</span><br />
-                    <span className="sm-value">{(aggregate.avgSpeed / 3.6).toFixed(2)} m/s</span>
+                    <span className="sm-value">{aggregate.avgSpeed.toFixed(2)} m/s</span>
                   </div>
                 )}
                 {aggregate.maxSpeedMs != null && (
@@ -506,8 +506,8 @@ export default function TeamSessionDetailPage() {
                   </div>
                 </div>
                 <div className="split-metrics" style={{ marginTop: 12 }}>
-                  <div className="split-metric"><span className="sm-label">Max Speed</span><br /><span className="sm-value">{(m.maxSpeedMs ?? m.maxSpeed / 3.6).toFixed(2)} m/s</span></div>
-                  <div className="split-metric"><span className="sm-label">Avg Speed</span><br /><span className="sm-value">{(m.avgSpeed / 3.6).toFixed(2)} m/s</span></div>
+                  <div className="split-metric"><span className="sm-label">Max Speed</span><br /><span className="sm-value">{(m.maxSpeedMs ?? m.maxSpeed).toFixed(2)} m/s</span></div>
+                  <div className="split-metric"><span className="sm-label">Avg Speed</span><br /><span className="sm-value">{m.avgSpeed.toFixed(2)} m/s</span></div>
                   <div className="split-metric"><span className="sm-label">Max Accel</span><br /><span className="sm-value">{m.maxAccel?.toFixed(1)} m/s²</span></div>
                   <div className="split-metric"><span className="sm-label">Avg Accel</span><br /><span className="sm-value">{m.avgAccel?.toFixed(2)} m/s²</span></div>
                   <div className="split-metric"><span className="sm-label">Max Decel</span><br /><span className="sm-value">{m.maxDecel?.toFixed(1)} m/s²</span></div>

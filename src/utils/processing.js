@@ -8,7 +8,7 @@ export function processSession(sessionData) {
     ts: new Date(Date.UTC(+r.year, +r.month - 1, +r.day, +r.hour, +r.minute, +r.second, +r.millisecond)),
     lat: parseFloat(r.latitude),
     lon: parseFloat(r.longitude),
-    speed: parseFloat(r.speed_kph),
+    speed: parseFloat(r.speed_kph) / 3.6,
     ax: parseFloat(r.accel_x),
     ay: parseFloat(r.accel_y),
     az: parseFloat(r.accel_z),
@@ -64,10 +64,49 @@ export function processSession(sessionData) {
     p.t = (p.tick - d[0].tick) / 1000;
   }
 
+  // GPS jump filter: reject (0,0)/NaN null-island fixes and samples implying
+  // speed above human limit. 15 m/s ≈ 54 km/h > elite sprint (~12 m/s).
+  const MAX_SPEED_MS = 15;
+  const isBadFix = (lat, lon) =>
+    !Number.isFinite(lat) || !Number.isFinite(lon) ||
+    (Math.abs(lat) < 1e-4 && Math.abs(lon) < 1e-4);
+
+  let lastGoodIdx = -1;
   for (let i = 0; i < d.length; i++) {
-    if (i === 0) { d[i].dist = 0; d[i].cumDist = 0; continue; }
-    d[i].dist = haversine(d[i - 1].lat, d[i - 1].lon, d[i].lat, d[i].lon);
-    d[i].cumDist = d[i - 1].cumDist + d[i].dist;
+    const bad = isBadFix(d[i].lat, d[i].lon);
+    if (bad) {
+      d[i].gpsJump = true;
+      if (lastGoodIdx >= 0) {
+        d[i].lat = d[lastGoodIdx].lat;
+        d[i].lon = d[lastGoodIdx].lon;
+      }
+      d[i].dist = 0;
+      d[i].cumDist = i === 0 ? 0 : d[i - 1].cumDist;
+      continue;
+    }
+    if (lastGoodIdx < 0) {
+      d[i].gpsJump = false;
+      d[i].dist = 0;
+      d[i].cumDist = i === 0 ? 0 : d[i - 1].cumDist;
+      lastGoodIdx = i;
+      continue;
+    }
+    const dt = d[i].t - d[lastGoodIdx].t;
+    const raw = haversine(d[lastGoodIdx].lat, d[lastGoodIdx].lon, d[i].lat, d[i].lon);
+    const impliedMs = dt > 0 ? raw / dt : Infinity;
+    if (impliedMs > MAX_SPEED_MS) {
+      d[i].gpsJump = true;
+      d[i].lat = d[lastGoodIdx].lat;
+      d[i].lon = d[lastGoodIdx].lon;
+      d[i].dist = 0;
+      d[i].cumDist = d[i - 1].cumDist;
+      if (d[i].speed > MAX_SPEED_MS) d[i].speed = d[lastGoodIdx].speed;
+    } else {
+      d[i].gpsJump = false;
+      d[i].dist = raw;
+      d[i].cumDist = d[i - 1].cumDist + raw;
+      lastGoodIdx = i;
+    }
   }
 
   return d;

@@ -72,7 +72,7 @@ export default function HeatMap({ data, chartView }) {
       if (d.linMag > aMax) aMax = d.linMag;
     }
     return {
-      speed: { min: Math.floor(sMin), max: Math.ceil(sMax) },
+      speed: { min: Math.floor(sMin * 10) / 10, max: Math.ceil(sMax * 10) / 10 },
       accel: { min: Math.floor(aMin * 10) / 10, max: Math.ceil(aMax * 10) / 10 },
     };
   }, [data]);
@@ -87,7 +87,7 @@ export default function HeatMap({ data, chartView }) {
   const threshold = mode === 'speed' ? speedThreshold : accelThreshold;
   const setThreshold = mode === 'speed' ? setSpeedThreshold : setAccelThreshold;
   const thresholdMeta = sessionStats?.[mode === 'speed' ? 'speed' : 'accel'];
-  const thresholdUnit = mode === 'speed' ? 'km/h' : 'g';
+  const thresholdUnit = mode === 'speed' ? 'm/s' : 'g';
 
   // Init map
   useEffect(() => {
@@ -182,7 +182,7 @@ export default function HeatMap({ data, chartView }) {
               type="range"
               min={thresholdMeta.min}
               max={thresholdMeta.max}
-              step={mode === 'accel' ? 0.1 : 1}
+              step={0.1}
               value={threshold}
               onChange={e => setThreshold(+e.target.value)}
             />
