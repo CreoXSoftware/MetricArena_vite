@@ -2,7 +2,7 @@
   "name": "metric-arena",
   "private": true,
   "version": "0.0.0",
-  "homepage": "https://creoxsoftware.github.io/MetricArena_vite/",
+  "homepage": "https://metricarena.co.za/",
   "type": "module",
   "scripts": {
     "predeploy": "npm run build",
