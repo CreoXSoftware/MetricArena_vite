@@ -91,7 +91,7 @@ export default function UploadPage({ onClose } = {}) {
             const version = inferBinaryVersion(file.name);
             rows = parseBinary(e.target.result, version);
           } else {
-            rows = parseCSV(e.target.result);
+            rows = parseCSV(e.target.result, file.name);
           }
           setPendingRows(rows);
           setPendingFileBlob(file);

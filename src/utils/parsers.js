@@ -53,17 +53,34 @@ export function parseBinary(buffer, version) {
 const SENSOR_CSV_RE = /^\$?\d{2}:\d{2}:\d{2}\.\d{3},/;
 
 /**
+ * Extract session date from CSV filename `log(DD-MM-YYYY)time(HHMM).csv`.
+ * Returns {year, month, day} or null. Time portion ignored — row timestamps carry HH:MM:SS.
+ */
+export function parseCsvFilenameDate(filename) {
+  if (!filename) return null;
+  const m = filename.match(/log\((\d{1,2})-(\d{1,2})-(\d{4})\)/i);
+  if (!m) return null;
+  const day = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  const year = parseInt(m[3], 10);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return { year, month, day };
+}
+
+/**
  * Parse sensor CSV (no header): [$]HH:MM:SS.mmm,ax,ay,az,lat,lon,speed_knots*
- * Date defaults to today (UTC). kernelTick = ms offset from first row.
+ * Date taken from filename `log(DD-MM-YYYY)time(HHMM).csv` if available,
+ * else today (UTC). kernelTick = ms offset from first row.
  * No gyro: gravity vector is derived from LPF of accel in processSession
  * (gyro rotation skipped when theta<=1e-9, complementary filter acts as LPF).
  */
-export function parseSensorCSV(text) {
+export function parseSensorCSV(text, filename) {
   const lines = text.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const fromName = parseCsvFilenameDate(filename);
   const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = now.getUTCMonth() + 1;
-  const day = now.getUTCDate();
+  const year = fromName ? fromName.year : now.getUTCFullYear();
+  const month = fromName ? fromName.month : now.getUTCMonth() + 1;
+  const day = fromName ? fromName.day : now.getUTCDate();
   let baseMs = null;
   const rows = [];
 
@@ -118,9 +135,9 @@ export function parseSensorCSV(text) {
  * Parse a CSV string into session rows.
  * Auto-detects sensor CSV format (no header, HH:MM:SS.mmm timestamp).
  */
-export function parseCSV(text) {
+export function parseCSV(text, filename) {
   const firstLine = text.trimStart().split(/\r?\n/)[0] || '';
-  if (SENSOR_CSV_RE.test(firstLine.trim())) return parseSensorCSV(text);
+  if (SENSOR_CSV_RE.test(firstLine.trim())) return parseSensorCSV(text, filename);
 
   const lines = text.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const headers = lines[0].split(',').map(h => h.trim());

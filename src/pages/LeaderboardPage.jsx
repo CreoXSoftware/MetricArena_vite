@@ -9,6 +9,7 @@ import {
   COUNTRIES, POSITIONS_BY_SPORT,
   PLAYER_COMPARISON_ROWS, TEAM_COMPARISON_ROWS,
 } from '../utils/constants';
+import DateField from '../components/DateField';
 
 /* ─── tiny search-with-dropdown helper ─── */
 function EntitySearch({ placeholder, onSearch, onSelect, renderItem }) {
@@ -383,19 +384,15 @@ export default function LeaderboardPage() {
           </div>
 
           <div className="leaderboard-filters">
-            <input
-              type="date"
-              className="filter-date"
+            <DateField
               value={viewMode === 'individuals' ? dateFrom : teamDateFrom}
-              onChange={e => viewMode === 'individuals' ? setDateFrom(e.target.value) : setTeamDateFrom(e.target.value)}
+              onChange={v => viewMode === 'individuals' ? setDateFrom(v) : setTeamDateFrom(v)}
               title="From date"
             />
             <span className="filter-date-sep">–</span>
-            <input
-              type="date"
-              className="filter-date"
+            <DateField
               value={viewMode === 'individuals' ? dateTo : teamDateTo}
-              onChange={e => viewMode === 'individuals' ? setDateTo(e.target.value) : setTeamDateTo(e.target.value)}
+              onChange={v => viewMode === 'individuals' ? setDateTo(v) : setTeamDateTo(v)}
               title="To date"
             />
             {viewMode === 'individuals' && (
@@ -584,9 +581,9 @@ export default function LeaderboardPage() {
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
-            <input type="date" className="filter-date" value={compDateFrom} onChange={e => setCompDateFrom(e.target.value)} title="From date" />
+            <DateField value={compDateFrom} onChange={v => setCompDateFrom(v)} title="From date" />
             <span className="filter-date-sep">–</span>
-            <input type="date" className="filter-date" value={compDateTo} onChange={e => setCompDateTo(e.target.value)} title="To date" />
+            <DateField value={compDateTo} onChange={v => setCompDateTo(v)} title="To date" />
             <button
               className="btn btn-accent btn-sm"
               onClick={handleCompare}

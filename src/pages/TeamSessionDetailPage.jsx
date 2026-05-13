@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase';
 import { formatDuration } from '../utils/format';
 import { exportTeamSessionPDF, exportPlayerTeamSessionPDF } from '../utils/pdfExport';
 import ExportMenu from '../components/ExportMenu';
+import DateField from '../components/DateField';
 
 function downloadCSV(csv, filename) {
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -221,11 +222,11 @@ export default function TeamSessionDetailPage() {
               required
               autoFocus
             />
-            <input
-              type="date"
+            <DateField
               value={editDate}
-              onChange={e => setEditDate(e.target.value)}
+              onChange={v => setEditDate(v)}
               required
+              isClearable={false}
             />
             <div className="ts-edit-actions">
               <button type="submit" className="btn btn-sm btn-accent" disabled={editSubmitting}>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTeams } from '../hooks/useTeams';
 import { useSession } from '../contexts/SessionContext';
+import { SPORTS } from '../utils/constants';
 
 
 export default function TeamsPage() {
@@ -12,6 +13,7 @@ export default function TeamsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newSport, setNewSport] = useState('');
   const [newIsPlayer, setNewIsPlayer] = useState(true);
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState(null);
@@ -22,11 +24,13 @@ export default function TeamsPage() {
     if (!newName.trim()) return;
     setSubmitting(true);
     setError(null);
-    const sport = activeSport === 'all' ? 'general' : activeSport;
+    const sport = activeSport === 'all' ? newSport : activeSport;
+    if (!sport) { setSubmitting(false); setError('Select a sport'); return; }
     const { error: err } = await createTeam(newName.trim(), sport, newIsPlayer);
     setSubmitting(false);
     if (err) { setError(err); return; }
     setNewName('');
+    setNewSport('');
     setNewIsPlayer(true);
     setShowCreate(false);
   };
@@ -78,6 +82,18 @@ export default function TeamsPage() {
             required
             autoFocus
           />
+          {activeSport === 'all' && (
+            <select
+              value={newSport}
+              onChange={(e) => setNewSport(e.target.value)}
+              required
+            >
+              <option value="" disabled>Select sport…</option>
+              {SPORTS.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          )}
           <label className="teams-checkbox-label">
             <input
               type="checkbox"

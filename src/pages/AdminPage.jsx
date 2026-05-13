@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../hooks/useAdmin';
 import { SPORTS, SESSION_TYPES } from '../utils/constants';
 import { formatDuration } from '../utils/format';
+import DateField from '../components/DateField';
 
 /* ── SVG icon helpers ──────────────────────────────────────────────── */
 
@@ -221,8 +222,8 @@ export default function AdminPage() {
               <option value="all">All Types</option>
               {SESSION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
-            <input type="date" className="admin-filter-select" value={sessionDateFrom} onChange={e => setSessionDateFrom(e.target.value)} title="From date" />
-            <input type="date" className="admin-filter-select" value={sessionDateTo} onChange={e => setSessionDateTo(e.target.value)} title="To date" />
+            <DateField className="admin-filter-select" value={sessionDateFrom} onChange={v => setSessionDateFrom(v)} title="From date" />
+            <DateField className="admin-filter-select" value={sessionDateTo} onChange={v => setSessionDateTo(v)} title="To date" />
             <button
               className={`leaderboard-verified-toggle${sessionVerifiedOnly ? ' active' : ''}`}
               onClick={() => setSessionVerifiedOnly(v => !v)}

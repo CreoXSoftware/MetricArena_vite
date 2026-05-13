@@ -6,6 +6,7 @@ import { useTeamSessions } from '../hooks/useTeamSessions';
 import { useTeams } from '../hooks/useTeams';
 import { useSession } from '../contexts/SessionContext';
 import TeamSessionTag from '../components/TeamSessionTag';
+import DateField from '../components/DateField';
 import { formatDuration } from '../utils/format';
 import { SESSION_TYPES } from '../utils/constants';
 import { parseBinary, parseCSV, inferBinaryVersion } from '../utils/parsers';
@@ -202,19 +203,15 @@ export default function SessionHistoryPage() {
             {myTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         )}
-        <input
-          type="date"
+        <DateField
           value={filterDateFrom}
-          onChange={e => setFilterDateFrom(e.target.value)}
-          className="filter-date"
+          onChange={v => setFilterDateFrom(v)}
           title="From date"
         />
         <span className="filter-date-sep">–</span>
-        <input
-          type="date"
+        <DateField
           value={filterDateTo}
-          onChange={e => setFilterDateTo(e.target.value)}
-          className="filter-date"
+          onChange={v => setFilterDateTo(v)}
           title="To date"
         />
         {hasActiveFilters && (
@@ -268,11 +265,11 @@ export default function SessionHistoryPage() {
             required
             autoFocus
           />
-          <input
-            type="date"
+          <DateField
             value={createDate}
-            onChange={e => setCreateDate(e.target.value)}
+            onChange={v => setCreateDate(v)}
             required
+            isClearable={false}
           />
           <button type="submit" className="btn btn-accent" disabled={createSubmitting}>
             {createSubmitting ? 'Creating…' : 'Create'}
@@ -528,11 +525,11 @@ export default function SessionHistoryPage() {
                           required
                           autoFocus
                         />
-                        <input
-                          type="date"
+                        <DateField
                           value={editingTs.session_date}
-                          onChange={e => setEditingTs(v => ({ ...v, session_date: e.target.value }))}
+                          onChange={v => setEditingTs(prev => ({ ...prev, session_date: v }))}
                           required
+                          isClearable={false}
                         />
                         <div className="ts-edit-actions">
                           <button type="submit" className="btn btn-sm btn-accent" disabled={editSubmitting}>
