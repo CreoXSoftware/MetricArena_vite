@@ -190,7 +190,7 @@ export default function SessionDetailPage({ guestMode } = {}) {
     }));
   }, [processedData]);
 
-  if (!processedData) return <Navigate to={guestMode ? '/' : '/app/upload'} replace />;
+  if (!processedData) return <Navigate to={guestMode ? '/' : '/app/leaderboard'} replace />;
 
   const d0 = processedData[0];
   const sessionInfo = d0

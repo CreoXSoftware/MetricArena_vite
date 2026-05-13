@@ -62,7 +62,7 @@ export default function LandingPage() {
   }, [handleFile]);
 
   if (loading) return null;
-  if (user) return <Navigate to="/app/upload" replace />;
+  if (user) return <Navigate to="/app/leaderboard" replace />;
 
   return (
     <div className="landing-page">
