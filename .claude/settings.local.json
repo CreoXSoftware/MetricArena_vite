@@ -21,7 +21,11 @@
       "Read(//c/Users/nelis/.claude/plugins/marketplaces/caveman/caveman-compress/scripts/**)",
       "Bash(python -m scripts \"c:/Users/nelis/Documents/CreoX/MetricAthlete/metric-arena-vite/metric-arena/CLAUDE.md\")",
       "Bash(where claude:*)",
-      "Bash(python -c \"import anthropic; print\\('ok'\\)\")"
+      "Bash(python -c \"import anthropic; print\\('ok'\\)\")",
+      "mcp__supabase__get_project_url"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

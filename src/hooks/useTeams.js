@@ -137,6 +137,7 @@ export function useTeams() {
     const { data } = await supabase
       .from('profiles')
       .select('id, display_name, avatar_url')
+      .eq('is_managed', false)
       .ilike('display_name', `%${query}%`)
       .limit(10);
     return data || [];
@@ -145,10 +146,12 @@ export function useTeams() {
   const getTeamMembers = useCallback(async (teamId) => {
     const { data } = await supabase
       .from('team_members')
-      .select('user_id, is_manager, is_player, joined_at, profiles(id, display_name, avatar_url)')
+      .select('user_id, is_manager, is_player, joined_at, profiles(id, display_name, avatar_url, is_managed, managed_by)')
       .eq('team_id', teamId);
     return (data || []).map(m => ({
       ...m.profiles,
+      is_managed: m.profiles?.is_managed || false,
+      managed_by: m.profiles?.managed_by || null,
       is_manager: m.is_manager,
       is_player: m.is_player,
       joined_at: m.joined_at,

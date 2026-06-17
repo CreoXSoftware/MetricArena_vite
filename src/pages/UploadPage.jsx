@@ -9,6 +9,7 @@ import { useSession } from '../contexts/SessionContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTeamSessions } from '../hooks/useTeamSessions';
 import { useTeams } from '../hooks/useTeams';
+import { useManagedPlayers } from '../hooks/useManagedPlayers';
 import { useSessions } from '../hooks/useSessions';
 import { formatDuration } from '../utils/format';
 import { SESSION_TYPES } from '../utils/constants';
@@ -26,6 +27,7 @@ export default function UploadPage({ onClose } = {}) {
   const { user } = useAuth();
   const { myAvailableTeamSessions } = useTeamSessions();
   const { myTeams, getTeamMembers } = useTeams();
+  const { listMyManagedPlayers } = useManagedPlayers();
   const { saveSession } = useSessions();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -40,30 +42,58 @@ export default function UploadPage({ onClose } = {}) {
   const [sessionType, setSessionType] = useState('game');
   const [selectedTeamSessionId, setSelectedTeamSessionId] = useState('');
 
-  // Manager upload-on-behalf state
+  // "Session for" selector state (managed players + real on-behalf)
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
   const [teamMembers, setTeamMembers] = useState([]);
   const [playerProfileData, setPlayerProfileData] = useState(null);
+  const [managedPlayers, setManagedPlayers] = useState([]);
 
   // Determine if selected team session is from a team where user is manager
   const selectedTs = myAvailableTeamSessions.find(ts => ts.id === selectedTeamSessionId);
   const isManagerOfSelectedTeam = selectedTs && myTeams.some(t => t.id === selectedTs.team_id && t.is_manager);
+  const managerTeamIds = useMemo(() => myTeams.filter(t => t.is_manager).map(t => t.id), [myTeams]);
 
-  // Fetch team members when a manager selects a team session
+  // Load managed players across all teams I manage
+  useEffect(() => {
+    if (managerTeamIds.length === 0) { setManagedPlayers([]); return; }
+    listMyManagedPlayers(managerTeamIds).then(setManagedPlayers);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [managerTeamIds.join(',')]);
+
+  // Group managed players by team for the selector's optgroups
+  const managedTeamGroups = useMemo(() => {
+    const map = new Map();
+    managedPlayers.forEach(p => {
+      if (!map.has(p.team_id)) map.set(p.team_id, { team_id: p.team_id, team_name: p.team_name, players: [] });
+      map.get(p.team_id).players.push(p);
+    });
+    return Array.from(map.values());
+  }, [managedPlayers]);
+
+  // Fetch real (non-managed) players when a manager selects a team session
   useEffect(() => {
     if (!isManagerOfSelectedTeam || !selectedTs) {
       setTeamMembers([]);
-      setSelectedPlayerId('');
-      setPlayerProfileData(null);
       return;
     }
     getTeamMembers(selectedTs.team_id).then(members => {
-      setTeamMembers(members.filter(m => m.is_player));
+      setTeamMembers(members.filter(m => m.is_player && !m.is_managed));
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTeamSessionId, isManagerOfSelectedTeam]);
 
-  // Fetch the selected player's profile for accurate metrics
+  // Drop a stale real-player selection when it leaves the available set
+  // (managed-player selections persist regardless of the team session).
+  useEffect(() => {
+    if (!selectedPlayerId) return;
+    if (managedPlayers.some(p => p.id === selectedPlayerId)) return;
+    if (selectedPlayerId === user?.id) return;
+    if (!teamMembers.some(m => m.id === selectedPlayerId)) {
+      setSelectedPlayerId('');
+    }
+  }, [teamMembers, managedPlayers, selectedPlayerId, user?.id]);
+
+  // Fetch the selected player's profile for accurate metrics (managed or real)
   useEffect(() => {
     if (!selectedPlayerId || selectedPlayerId === user?.id) {
       setPlayerProfileData(null);
@@ -76,6 +106,22 @@ export default function UploadPage({ onClose } = {}) {
       .single()
       .then(({ data }) => { if (data) setPlayerProfileData(data); });
   }, [selectedPlayerId, user?.id]);
+
+  // Selecting a managed player: clear a team-session link that isn't from their team
+  const handlePersonChange = useCallback((value) => {
+    setSelectedPlayerId(value);
+    const mp = managedPlayers.find(p => p.id === value);
+    if (mp) {
+      setSelectedTeamSessionId(prev => {
+        const ts = myAvailableTeamSessions.find(t => t.id === prev);
+        return (!ts || ts.team_id !== mp.team_id) ? '' : prev;
+      });
+    }
+  }, [managedPlayers, myAvailableTeamSessions]);
+
+  // Show the "Session for" selector only when there is someone else to pick.
+  const showPersonSelector = managedPlayers.length > 0
+    || (isManagerOfSelectedTeam && teamMembers.some(m => m.id !== user?.id));
 
   const parseFile = useCallback((file) => {
     const isBinary = /\.bin$/i.test(file.name);
@@ -198,7 +244,7 @@ export default function UploadPage({ onClose } = {}) {
       setError(err.message);
       setLoading(false);
     }
-  }, [pendingRows, user, profile, thresholds, activeSport, sessionType, selectedTeamSessionId, selectedPlayerId, playerProfileData, teamMembers, fileName, pendingFileBlob, setProcessedData, setCurrentSessionId, setLoadedSplits, loadSessionFromHistory, navigate, saveSession]);
+  }, [pendingRows, user, profile, thresholds, activeSport, sessionType, selectedTeamSessionId, selectedPlayerId, playerProfileData, fileName, pendingFileBlob, setProcessedData, setCurrentSessionId, setLoadedSplits, loadSessionFromHistory, navigate, saveSession]);
 
   const handleCancel = useCallback(() => {
     setPendingRows(null);
@@ -224,10 +270,16 @@ export default function UploadPage({ onClose } = {}) {
 
   // Filter team sessions to those whose date matches the file's UTC session date
   const filteredTeamSessions = useMemo(() => {
-    if (!sessionInfo) return myAvailableTeamSessions;
-    const sessionDateUTC = sessionInfo.startUtc.toISOString().slice(0, 10);
-    return myAvailableTeamSessions.filter(ts => ts.session_date === sessionDateUTC);
-  }, [sessionInfo, myAvailableTeamSessions]);
+    let list = myAvailableTeamSessions;
+    if (sessionInfo) {
+      const sessionDateUTC = sessionInfo.startUtc.toISOString().slice(0, 10);
+      list = list.filter(ts => ts.session_date === sessionDateUTC);
+    }
+    // When uploading for a managed player, restrict links to their own team.
+    const mp = managedPlayers.find(p => p.id === selectedPlayerId);
+    if (mp) list = list.filter(ts => ts.team_id === mp.team_id);
+    return list;
+  }, [sessionInfo, myAvailableTeamSessions, managedPlayers, selectedPlayerId]);
 
   const content = (() => {
     if (loading) {
@@ -299,17 +351,25 @@ export default function UploadPage({ onClose } = {}) {
               </select>
             </label>
 
-            {isManagerOfSelectedTeam && selectedTeamSessionId && (
+            {showPersonSelector && (
               <label className="upload-details-label">
-                Upload on behalf of
-                <select
-                  value={selectedPlayerId}
-                  onChange={(e) => setSelectedPlayerId(e.target.value)}
-                >
+                Session for
+                <select value={selectedPlayerId} onChange={(e) => handlePersonChange(e.target.value)}>
                   <option value="">Myself</option>
-                  {teamMembers.filter(m => m.id !== user.id).map(m => (
-                    <option key={m.id} value={m.id}>{m.display_name || 'Unknown'}</option>
+                  {managedTeamGroups.map(g => (
+                    <optgroup key={g.team_id} label={g.team_name || 'Managed players'}>
+                      {g.players.map(p => (
+                        <option key={p.id} value={p.id}>{p.display_name || 'Unnamed'} (managed)</option>
+                      ))}
+                    </optgroup>
                   ))}
+                  {isManagerOfSelectedTeam && teamMembers.filter(m => m.id !== user.id).length > 0 && (
+                    <optgroup label={`${selectedTs.team_name || 'Team'} players`}>
+                      {teamMembers.filter(m => m.id !== user.id).map(m => (
+                        <option key={m.id} value={m.id}>{m.display_name || 'Unknown'}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </label>
             )}

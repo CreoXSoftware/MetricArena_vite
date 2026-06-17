@@ -2,18 +2,35 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTeams } from '../hooks/useTeams';
+import { useManagedPlayers } from '../hooks/useManagedPlayers';
 import { supabase } from '../lib/supabase';
 import { SPORTS, COUNTRIES } from '../utils/constants';
 import ImageCropModal from '../components/ImageCropModal';
+import ManagedPlayerForm from '../components/ManagedPlayerForm';
 
 export default function TeamDetailPage() {
   const { teamId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { myTeams, loading: teamsLoading, leaveTeam, removeMember, transferManager, searchUsers, getTeamMembers, updateTeam, updateTeamAvatar, deleteTeam } = useTeams();
+  const { createManagedPlayer, updateManagedPlayer, deleteManagedPlayer, linkManagedPlayer, getManagedPlayerSessionCount } = useManagedPlayers();
 
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
+
+  // Managed players (create/edit modal)
+  const [showPlayerForm, setShowPlayerForm] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState(null); // null = create
+  const [savingPlayer, setSavingPlayer] = useState(false);
+  const [playerFormError, setPlayerFormError] = useState(null);
+  // Managed player delete
+  const [deletePlayer, setDeletePlayer] = useState(null); // { id, name, count }
+  const [deletingPlayer, setDeletingPlayer] = useState(false);
+  // Managed player link/consolidate
+  const [linkPlayer, setLinkPlayer] = useState(null); // ghost being linked
+  const [linkTargetId, setLinkTargetId] = useState('');
+  const [linking, setLinking] = useState(false);
+  const [linkError, setLinkError] = useState(null);
 
   // Manager transfer
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,6 +90,65 @@ export default function TeamDetailPage() {
 
   const handleRemoveMember = async (userId) => {
     await removeMember(teamId, userId);
+    await fetchMembers();
+  };
+
+  // ── Managed players ────────────────────────────────────────────────
+  const handleAddPlayer = () => {
+    setEditingPlayer(null);
+    setPlayerFormError(null);
+    setShowPlayerForm(true);
+  };
+
+  const handleEditPlayer = async (playerId) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, display_name, athlete_profile, default_thresholds')
+      .eq('id', playerId)
+      .single();
+    if (!data) return;
+    setEditingPlayer(data);
+    setPlayerFormError(null);
+    setShowPlayerForm(true);
+  };
+
+  const handleSavePlayer = async ({ display_name, athlete_profile, default_thresholds }) => {
+    setSavingPlayer(true);
+    setPlayerFormError(null);
+    const result = editingPlayer
+      ? await updateManagedPlayer(editingPlayer.id, { display_name, athlete_profile, default_thresholds })
+      : await createManagedPlayer(teamId, { display_name, athlete_profile, default_thresholds });
+    setSavingPlayer(false);
+    if (result?.error) { setPlayerFormError(result.error); return; }
+    setShowPlayerForm(false);
+    setEditingPlayer(null);
+    await fetchMembers();
+  };
+
+  const handleAskDeletePlayer = async (m) => {
+    const count = await getManagedPlayerSessionCount(m.id);
+    setDeletePlayer({ id: m.id, name: m.display_name || 'this player', count });
+  };
+
+  const handleConfirmDeletePlayer = async () => {
+    if (!deletePlayer) return;
+    setDeletingPlayer(true);
+    const result = await deleteManagedPlayer(deletePlayer.id);
+    setDeletingPlayer(false);
+    if (result?.error) { console.error('Delete managed player error:', result.error); return; }
+    setDeletePlayer(null);
+    await fetchMembers();
+  };
+
+  const handleConfirmLink = async () => {
+    if (!linkPlayer || !linkTargetId) return;
+    setLinking(true);
+    setLinkError(null);
+    const result = await linkManagedPlayer(linkPlayer.id, linkTargetId, teamId);
+    setLinking(false);
+    if (result?.error) { setLinkError(result.error); return; }
+    setLinkPlayer(null);
+    setLinkTargetId('');
     await fetchMembers();
   };
 
@@ -256,7 +332,20 @@ export default function TeamDetailPage() {
                 )}
                 <span className="team-member-name">{m.display_name || 'Unknown'}</span>
                 {m.is_manager && <span className="manager-badge">Manager</span>}
-                {isManager && m.id !== user?.id && (
+                {m.is_managed && <span className="manager-badge" style={{ background: 'var(--warn)', color: '#000' }}>Managed</span>}
+                {isManager && m.is_managed ? (
+                  <div className="team-member-actions">
+                    <button className="btn btn-sm btn-outline" onClick={() => handleEditPlayer(m.id)}>
+                      Edit
+                    </button>
+                    <button className="btn btn-sm btn-outline" onClick={() => { setLinkPlayer(m); setLinkTargetId(''); setLinkError(null); }}>
+                      Link
+                    </button>
+                    <button className="btn btn-sm btn-outline btn-danger" onClick={() => handleAskDeletePlayer(m)}>
+                      Delete
+                    </button>
+                  </div>
+                ) : (isManager && m.id !== user?.id && (
                   <div className="team-member-actions">
                     <button className="btn btn-sm btn-outline" onClick={() => handleTransferManager(m.id)}>
                       Make Manager
@@ -265,10 +354,16 @@ export default function TeamDetailPage() {
                       Remove
                     </button>
                   </div>
-                )}
+                ))}
               </div>
             ))}
           </div>
+        )}
+
+        {isManager && (
+          <button className="btn btn-sm btn-accent" onClick={handleAddPlayer} style={{ marginTop: '12px' }}>
+            + Add Managed Player
+          </button>
         )}
 
         {isManager && (
@@ -353,6 +448,66 @@ export default function TeamDetailPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {showPlayerForm && (
+        <ManagedPlayerForm
+          initial={editingPlayer}
+          saving={savingPlayer}
+          error={playerFormError}
+          onSave={handleSavePlayer}
+          onCancel={() => { if (!savingPlayer) { setShowPlayerForm(false); setEditingPlayer(null); setPlayerFormError(null); } }}
+        />
+      )}
+
+      {deletePlayer && (
+        <div className="upload-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget && !deletingPlayer) setDeletePlayer(null); }}>
+          <div className="upload-modal" style={{ maxWidth: 460 }}>
+            <h3 className="team-section-title">Delete Managed Player</h3>
+            <p className="delete-confirm-message">
+              Permanently delete <strong>{deletePlayer.name}</strong>
+              {deletePlayer.count > 0
+                ? <> and their <strong>{deletePlayer.count}</strong> session{deletePlayer.count === 1 ? '' : 's'}?</>
+                : '?'} This cannot be undone.
+            </p>
+            <div className="delete-confirm-actions">
+              <button className="btn btn-sm btn-outline btn-danger" onClick={handleConfirmDeletePlayer} disabled={deletingPlayer}>
+                {deletingPlayer ? 'Deleting…' : 'Yes, delete'}
+              </button>
+              <button className="btn btn-sm btn-outline" onClick={() => setDeletePlayer(null)} disabled={deletingPlayer}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {linkPlayer && (
+        <div className="upload-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget && !linking) { setLinkPlayer(null); setLinkTargetId(''); } }}>
+          <div className="upload-modal" style={{ maxWidth: 460 }}>
+            <h3 className="team-section-title">Link to Real Account</h3>
+            <p className="profile-section-hint">
+              Merge <strong>{linkPlayer.display_name}</strong> into a real team member. All of their sessions move to that account and the managed player is removed. The member must have already joined this team via the invite code.
+            </p>
+            {(() => {
+              const targets = members.filter(m => !m.is_managed && m.is_player && m.id !== linkPlayer.id);
+              if (targets.length === 0) {
+                return <p className="text-dim">No real team members available yet. Have the player sign up and join with the invite code first.</p>;
+              }
+              return (
+                <select className="filter-select" value={linkTargetId} onChange={e => setLinkTargetId(e.target.value)} style={{ width: '100%', marginTop: 8 }}>
+                  <option value="">Select a member…</option>
+                  {targets.map(t => <option key={t.id} value={t.id}>{t.display_name || 'Unknown'}</option>)}
+                </select>
+              );
+            })()}
+            {linkError && <div className="profile-section-hint" style={{ color: 'var(--error, #e5484d)', marginTop: 8 }}>{linkError}</div>}
+            <div className="delete-confirm-actions" style={{ marginTop: 12 }}>
+              <button className="btn btn-sm btn-accent" onClick={handleConfirmLink} disabled={linking || !linkTargetId}>
+                {linking ? 'Linking…' : 'Link & Merge'}
+              </button>
+              <button className="btn btn-sm btn-outline" onClick={() => { setLinkPlayer(null); setLinkTargetId(''); }} disabled={linking}>Cancel</button>
+            </div>
+          </div>
         </div>
       )}
 

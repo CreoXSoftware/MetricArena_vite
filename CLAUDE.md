@@ -25,11 +25,12 @@ Vite + React 19 + Supabase (auth/DB/storage). Plain JS, no TypeScript. Functiona
 - Account: `user` (default) | `admin` (DB-only, access `/app/admin`)
 - Team: `is_manager` + `is_player` flags on `team_members`
 - Privacy: `athlete_profile.is_public` (profiles), `teams.is_public`
+- Managed players: `profiles.is_managed=true` "ghost" profiles (no auth.users), `managed_by`→creator. Live in one team; any manager of that team can edit/upload/delete (authority via team managership, not `managed_by`). Hidden from public leaderboard/search. Mergeable into a real account (`merge_managed_player`).
 
 ## DB Schema
 
 ### `profiles`
-`id` uuid PK, `display_name` text, `avatar_url` text?, `role` text=`'user'`, `is_verified` bool=false, `athlete_profile` jsonb?, `default_thresholds` jsonb?, `created_at`, `updated_at`
+`id` uuid PK (NOT FK to auth.users — `profiles_id_fkey` dropped so managed players can exist without an auth user; real signups still set `id=auth.uid()` via the signup trigger), `display_name` text, `avatar_url` text?, `role` text=`'user'`, `is_verified` bool=false, `athlete_profile` jsonb?, `default_thresholds` jsonb?, `managed_by` uuid→profiles? (creator/audit, `ON DELETE SET NULL`), `is_managed` bool=false (source of truth for managed players), `created_at`, `updated_at`
 
 ### `teams`
 `id` uuid PK, `name` text, `sport` text=`'general'`, `invite_code` text, `is_public` bool=true, `is_verified` bool=false, `created_by` uuid→profiles
@@ -46,15 +47,23 @@ Vite + React 19 + Supabase (auth/DB/storage). Plain JS, no TypeScript. Functiona
 ## RLS Helpers (SECURITY DEFINER)
 - `get_my_team_ids()` — user's member teams
 - `get_my_manager_team_ids()` — user's manager teams
+- `get_my_managed_player_ids()` — managed-player profile ids in my manager teams (keys all managed-player RLS)
+
+## RPCs (SECURITY DEFINER)
+- `create_managed_player(team_id, display_name, athlete_profile?, default_thresholds?)` — manager-only; inserts ghost profile + team_members row atomically
+- `merge_managed_player(ghost_id, real_id, team_id)` — manager-only; reassigns ghost's sessions to real account, drops ghost membership, deletes ghost profile (real account's profile untouched)
+- `delete_managed_player(id)` — manager-only; cascade-deletes sessions + membership + profile (storage files removed client-side first)
 
 ## RLS Policies
 | Table | Who can what |
 |-------|-------------|
-| profiles | all SELECT; own UPDATE; admin verify |
+| profiles | all SELECT; own UPDATE; admin verify; manager UPDATE/DELETE managed players (via `get_my_managed_player_ids()`); managed-player INSERT via `create_managed_player` RPC |
 | teams | all SELECT; own INSERT; manager UPDATE/DELETE; admin verify |
 | team_members | members SELECT; self INSERT; manager UPDATE; self/manager DELETE |
 | team_sessions | members SELECT; manager INSERT/UPDATE/DELETE |
-| sessions | own CRUD; manager sees/inserts/updates linked; admin reads all + verifies |
+| sessions | own CRUD; manager sees/inserts/updates linked; manager full CRUD of managed-player sessions (via `get_my_managed_player_ids()`, any `team_session_id`); admin reads all + verifies |
+
+Managed players are filtered out of public surfaces with `is_managed=false` (leaderboard/comparison RPCs — patch in DB; client `searchUsers`/`searchPlayers`/admin player list).
 
 ## Conventions
 - ESLint: unused vars matching `^[A-Z_]` allowed (components/constants)

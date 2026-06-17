@@ -130,6 +130,7 @@ export function useLeaderboard() {
     const { data } = await supabase
       .from('profiles')
       .select('id, display_name, avatar_url, is_verified')
+      .eq('is_managed', false)
       .ilike('display_name', `%${query}%`)
       .limit(10);
     return data || [];

@@ -21,6 +21,7 @@ export function useAdmin() {
     let q = supabase
       .from('profiles')
       .select('id, display_name, avatar_url, is_verified, role, created_at')
+      .eq('is_managed', false)
       .order('display_name', { ascending: true })
       .limit(50);
     if (query.trim().length >= 1) {
