@@ -943,6 +943,8 @@ body {
   width: 100%;
   height: 100%;
   display: block;
+  /* allow native vertical page scroll; horizontal drags are captured for split selection */
+  touch-action: pan-y;
 }
 
 .chart-legend {
@@ -2685,6 +2687,25 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   background: var(--surface2);
 }
 
+/* Freshly uploaded session: pulse the accent border, then fade back to normal. */
+.session-card-fresh {
+  animation: session-card-fresh-pulse 4s ease-out forwards;
+}
+@keyframes session-card-fresh-pulse {
+  0% {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent), 0 0 20px rgba(0, 229, 160, 0.45);
+  }
+  60% {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent), 0 0 20px rgba(0, 229, 160, 0.45);
+  }
+  100% {
+    border-color: var(--border);
+    box-shadow: 0 0 0 0 transparent, 0 0 0 transparent;
+  }
+}
+
 .session-card-header {
   display: flex;
   justify-content: space-between;
@@ -2757,6 +2778,29 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   border-radius: 8px;
   color: var(--text-dim);
   background: var(--surface2);
+}
+
+/* Session I uploaded on behalf of another player ("managed"), showing whose. */
+.session-managed-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 8px;
+  color: var(--accent);
+  background: rgba(0, 229, 160, 0.14);
+  border: 1px solid rgba(0, 229, 160, 0.40);
+  white-space: nowrap;
+}
+
+/* "Reassign" dropdown overlays from the card actions instead of pushing layout. */
+.session-reassign {
+  position: relative;
+  display: inline-flex;
+}
+.session-reassign-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
 }
 
 .session-card-metrics {

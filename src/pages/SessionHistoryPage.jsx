@@ -1,10 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import UploadPage from './UploadPage';
 import { useSessions } from '../hooks/useSessions';
 import { useTeamSessions } from '../hooks/useTeamSessions';
 import { useTeams } from '../hooks/useTeams';
+import { useManagedPlayers } from '../hooks/useManagedPlayers';
 import { useSession } from '../contexts/SessionContext';
+import { useAuth } from '../contexts/AuthContext';
 import TeamSessionTag from '../components/TeamSessionTag';
 import DateField from '../components/DateField';
 import { formatDuration } from '../utils/format';
@@ -24,10 +26,13 @@ function getSummaryMetrics(session) {
 }
 
 export default function SessionHistoryPage() {
-  const { sessions, loading: sessionsLoading, loadingMore: sessionsLoadingMore, hasMore: sessionsHasMore, loadMoreSessions, linkToTeamSession, unlinkFromTeamSession, deleteSession } = useSessions();
+  const { sessions, loading: sessionsLoading, loadingMore: sessionsLoadingMore, hasMore: sessionsHasMore, loadMoreSessions, linkToTeamSession, unlinkFromTeamSession, reassignSession, deleteSession, refreshSessions } = useSessions();
   const { myAvailableTeamSessions, loading: teamSessionsLoading, loadingMore: tsLoadingMore, hasMore: tsHasMore, loadMoreTeamSessions, createTeamSession, updateTeamSession, deleteTeamSession, refreshAvailable } = useTeamSessions();
   const { myTeams } = useTeams();
+  const { listMyManagedPlayers } = useManagedPlayers();
   const { loadSessionFromHistory, activeSport } = useSession();
+  const { user } = useAuth();
+  const currentUserId = user?.id;
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -42,6 +47,46 @@ export default function SessionHistoryPage() {
   const [pendingLinkSessionId, setPendingLinkSessionId] = useState(null);
   const [openingId, setOpeningId] = useState(null);
   const [openError, setOpenError] = useState(null);
+
+  // Briefly highlight a freshly uploaded session in the list instead of opening it.
+  const [freshSessionId, setFreshSessionId] = useState(null);
+  const freshCardRef = useRef(null);
+
+  const handleUploaded = useCallback(async (newId) => {
+    setShowUploadModal(false);
+    setViewMode('individual');
+    await refreshSessions(true);
+    if (newId) setFreshSessionId(newId);
+  }, [refreshSessions]);
+
+  useEffect(() => {
+    if (!freshSessionId) return;
+    freshCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const t = setTimeout(() => setFreshSessionId(null), 4000);
+    return () => clearTimeout(t);
+  }, [freshSessionId]);
+
+  // Managed players across the teams I manage — the reassignment targets for
+  // on-behalf sessions (plus "Myself").
+  const managerTeamIds = useMemo(() => myTeams.filter(t => t.is_manager).map(t => t.id), [myTeams]);
+  const [managedPlayers, setManagedPlayers] = useState([]);
+  useEffect(() => {
+    if (managerTeamIds.length === 0) { setManagedPlayers([]); return; }
+    listMyManagedPlayers(managerTeamIds).then(setManagedPlayers);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [managerTeamIds.join(',')]);
+
+  // Reassign dropdown: which on-behalf session's "change player" menu is open.
+  const [reassigningId, setReassigningId] = useState(null);
+
+  const handleReassign = useCallback(async (session, newUserId, targetTeamId) => {
+    const isMyself = newUserId === currentUserId;
+    // Drop the team-session link when the new owner can't keep it: reassigning
+    // to myself (no team context), or to a player in a different team.
+    const clearLink = !!session.team_session_id && (isMyself || targetTeamId !== session.team_id);
+    setReassigningId(null);
+    await reassignSession(session.id, newUserId, clearLink);
+  }, [reassignSession, currentUserId]);
 
   // Edit team session
   const [editingTs, setEditingTs] = useState(null); // { id, name, session_date, team_id }
@@ -227,7 +272,7 @@ export default function SessionHistoryPage() {
         </div>
       )}
 
-      {showUploadModal && <UploadPage onClose={() => setShowUploadModal(false)} />}
+      {showUploadModal && <UploadPage onClose={() => setShowUploadModal(false)} onUploaded={handleUploaded} />}
 
       {viewMode === 'team' && managerTeams.length > 0 && (
         <div className="sessions-add-row">
@@ -302,10 +347,12 @@ export default function SessionHistoryPage() {
                 const summary = getSummaryMetrics(s);
                 const m = summary?.metrics || {};
                 const isOpening = openingId === s.id;
+                const isFresh = s.id === freshSessionId;
                 return (
                   <div
                     key={s.id}
-                    className={`session-card${s.file_path ? ' session-card-clickable' : ''}`}
+                    ref={isFresh ? freshCardRef : null}
+                    className={`session-card${s.file_path ? ' session-card-clickable' : ''}${isFresh ? ' session-card-fresh' : ''}`}
                     onClick={() => s.file_path && !isOpening && openSession(s)}
                     title={s.file_path ? undefined : 'No file stored — cannot re-open'}
                   >
@@ -330,6 +377,14 @@ export default function SessionHistoryPage() {
                         </div>
                       </div>
                       <div className="session-card-badges">
+                        {s.is_on_behalf && (
+                          <span
+                            className="session-managed-badge"
+                            title={`Uploaded by you on behalf of ${s.owner_name || 'this player'}`}
+                          >
+                            Managed · {s.owner_name || 'Unknown'}
+                          </span>
+                        )}
                         {s.session_type && (
                           <span className="session-card-type">
                             {SESSION_TYPES.find(t => t.value === s.session_type)?.label || s.session_type}
@@ -463,6 +518,45 @@ export default function SessionHistoryPage() {
                       <div className="session-card-actions">
                         {isOpening && <span className="session-card-file">Opening…</span>}
                         {!isOpening && s.file_name && <span className="session-card-file">{s.file_name}</span>}
+                        {s.is_on_behalf && (
+                          <div className="session-reassign" onClick={(e) => e.stopPropagation()}>
+                            {reassigningId === s.id ? (
+                              <div
+                                className="session-link-dropdown session-reassign-dropdown"
+                                tabIndex={-1}
+                                ref={el => el && el.focus()}
+                                onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setReassigningId(null); }}
+                              >
+                                <button
+                                  className="session-link-option"
+                                  onMouseDown={(e) => { e.preventDefault(); handleReassign(s, currentUserId, null); }}
+                                >
+                                  <span className="session-link-option-name">Myself</span>
+                                </button>
+                                {managedPlayers.filter(p => p.id !== s.user_id).map(p => (
+                                  <button
+                                    key={p.id}
+                                    className="session-link-option"
+                                    onMouseDown={(e) => { e.preventDefault(); handleReassign(s, p.id, p.team_id); }}
+                                  >
+                                    <span className="session-link-option-team">{p.team_name}</span>
+                                    <span className="session-link-option-name">{p.display_name || 'Unnamed'} (managed)</span>
+                                  </button>
+                                ))}
+                                {managedPlayers.filter(p => p.id !== s.user_id).length === 0 && (
+                                  <div className="session-link-option-empty">No other managed players</div>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                className="btn btn-sm btn-outline"
+                                onClick={(e) => { e.stopPropagation(); setReassigningId(s.id); }}
+                              >
+                                Reassign
+                              </button>
+                            )}
+                          </div>
+                        )}
                         <button
                           className="btn btn-sm btn-outline btn-danger"
                           onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}

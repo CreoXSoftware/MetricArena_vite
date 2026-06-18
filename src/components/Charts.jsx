@@ -571,17 +571,111 @@ export function AccelChart({ data, chartView, thresholds, onZoom, onSelection, s
       }
     };
 
+    // ── touch (iPad/tablet): mirror the mouse drag, but first decide whether the
+    //    gesture is a horizontal split-select/resize (ours) or a vertical page
+    //    scroll (browser's). We only capture once a horizontal intent is clear. ──
+    const TOUCH_SLOP = 6; // px before committing to a direction
+    const tDrag = { pending: false, decided: false, startX: 0, startY: 0, edgeHit: null };
+
+    const handleTouchStart = (e) => {
+      const ai = infoRef.current;
+      if (!ai || e.touches.length !== 1) return; // ignore multi-touch (pinch etc.)
+      const t0 = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      tDrag.startX = t0.clientX;
+      tDrag.startY = t0.clientY;
+      tDrag.pending = true;
+      tDrag.decided = false;
+      tDrag.edgeHit = findHoveredEdge(t0.clientX, rect, ai, splitsRef.current, selectedSplitIdRef.current);
+      // No preventDefault here — let vertical scrolling through until intent is known.
+    };
+
+    const handleTouchMove = (e) => {
+      const ai = infoRef.current;
+      if (!ai) return;
+      const t0 = e.touches[0];
+      if (!t0) return;
+
+      if (tDrag.pending && !tDrag.decided) {
+        const dx = t0.clientX - tDrag.startX;
+        const dy = t0.clientY - tDrag.startY;
+        if (Math.abs(dx) < TOUCH_SLOP && Math.abs(dy) < TOUCH_SLOP) return;
+        if (Math.abs(dy) > Math.abs(dx)) { tDrag.pending = false; return; } // vertical → page scroll
+        // Horizontal intent → start the appropriate drag (mirrors handleDown).
+        tDrag.pending = false;
+        tDrag.decided = true;
+        if (tDrag.edgeHit) {
+          edgeDrag.active = true;
+          edgeDrag.splitId = tDrag.edgeHit.splitId;
+          edgeDrag.edge = tDrag.edgeHit.edge;
+        } else {
+          selRef.current.dragging = true;
+          selRef.current.start = xToTime(tDrag.startX);
+          selRef.current.end = selRef.current.start;
+          overlay.style.display = 'block';
+          overlay.style.width = '0px';
+        }
+      }
+
+      if (edgeDrag.active) {
+        e.preventDefault();
+        const t = xToTime(t0.clientX);
+        const ctx = canvas.getContext('2d');
+        if (baseImageRef.current) ctx.putImageData(baseImageRef.current, 0, 0);
+        drawSplitOverlays(ctx, ai, splitsRef.current, selectedSplitIdRef.current,
+          { splitId: edgeDrag.splitId, edge: edgeDrag.edge, time: t });
+      } else if (selRef.current.dragging) {
+        e.preventDefault();
+        selRef.current.end = xToTime(t0.clientX);
+        const s = selRef.current;
+        overlay.style.left = Math.min(timeToX(s.start), timeToX(s.end)) + 'px';
+        overlay.style.width = Math.abs(timeToX(s.end) - timeToX(s.start)) + 'px';
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      tDrag.pending = false;
+      tDrag.decided = false;
+      const t0 = e.changedTouches[0];
+      const clientX = t0 ? t0.clientX : null;
+      if (edgeDrag.active) {
+        edgeDrag.active = false;
+        if (clientX != null) onSplitResize?.(edgeDrag.splitId, edgeDrag.edge, xToTime(clientX));
+        edgeDrag.splitId = null;
+        edgeDrag.edge = null;
+        return;
+      }
+      if (!selRef.current.dragging) return;
+      selRef.current.dragging = false;
+      if (clientX != null) selRef.current.end = xToTime(clientX);
+      const s = selRef.current;
+      overlay.style.display = 'none';
+      if (Math.abs(s.end - s.start) > 0.3) {
+        onSelection?.(Math.min(s.start, s.end), Math.max(s.start, s.end));
+      } else {
+        onSelection?.(null, null);
+      }
+    };
+
     canvas.addEventListener('mousedown', handleDown);
     canvas.addEventListener('mousemove', handleMove);
     canvas.addEventListener('mouseleave', handleLeave);
     document.addEventListener('mousemove', handleDocMove);
     document.addEventListener('mouseup', handleDocUp);
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+    document.addEventListener('touchcancel', handleTouchEnd);
     return () => {
       canvas.removeEventListener('mousedown', handleDown);
       canvas.removeEventListener('mousemove', handleMove);
       canvas.removeEventListener('mouseleave', handleLeave);
       document.removeEventListener('mousemove', handleDocMove);
       document.removeEventListener('mouseup', handleDocUp);
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchcancel', handleTouchEnd);
     };
   }, [data, onSelection, onSplitResize, fmtX]);
 

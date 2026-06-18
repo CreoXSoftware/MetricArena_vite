@@ -22,7 +22,7 @@ function rowToUTCDate(r) {
   return new Date(Date.UTC(+r.year, +r.month - 1, +r.day, +r.hour, +r.minute, +r.second, +r.millisecond || 0));
 }
 
-export default function UploadPage({ onClose } = {}) {
+export default function UploadPage({ onClose, onUploaded } = {}) {
   const { profile, thresholds, setProcessedData, setCurrentSessionId, setLoadedSplits, loadSessionFromHistory, activeSport } = useSession();
   const { user } = useAuth();
   const { myAvailableTeamSessions } = useTeamSessions();
@@ -230,7 +230,13 @@ export default function UploadPage({ onClose } = {}) {
 
       if (saveError) throw new Error(saveError);
 
-      if (isOnBehalf) {
+      if (onUploaded) {
+        // Uploaded from the Sessions list: don't open the detail view — let the
+        // list close the modal and briefly highlight the freshly added session.
+        // On-behalf uploads now also live in my Individual list (uploaded_by me),
+        // tagged as managed, so they get the same treatment.
+        onUploaded(saved?.id || null);
+      } else if (isOnBehalf) {
         loadSessionFromHistory(data, effectiveThresholds, [], saved?.id || null, playerProfileData);
         navigate('/app/dashboard', { state: { from: 'sessions' } });
       } else {
@@ -244,7 +250,7 @@ export default function UploadPage({ onClose } = {}) {
       setError(err.message);
       setLoading(false);
     }
-  }, [pendingRows, user, profile, thresholds, activeSport, sessionType, selectedTeamSessionId, selectedPlayerId, playerProfileData, fileName, pendingFileBlob, setProcessedData, setCurrentSessionId, setLoadedSplits, loadSessionFromHistory, navigate, saveSession]);
+  }, [pendingRows, user, profile, thresholds, activeSport, sessionType, selectedTeamSessionId, selectedPlayerId, playerProfileData, fileName, pendingFileBlob, setProcessedData, setCurrentSessionId, setLoadedSplits, loadSessionFromHistory, navigate, saveSession, onUploaded]);
 
   const handleCancel = useCallback(() => {
     setPendingRows(null);

@@ -25,10 +25,12 @@ export function useSessions() {
     const from = offsetRef.current;
     const to = from + PAGE_SIZE - 1;
 
+    // Own sessions plus any I uploaded on behalf of someone else (managed or
+    // real players). `uploaded_by` is set to the uploader at insert time.
     const { data, count } = await supabase
       .from('sessions')
-      .select('*, team_sessions(id, name, team_id, teams(name))', { count: 'exact' })
-      .eq('user_id', user.id)
+      .select('*, team_sessions(id, name, team_id, teams(name)), owner:profiles!sessions_user_id_fkey(display_name, is_managed)', { count: 'exact' })
+      .or(`user_id.eq.${user.id},uploaded_by.eq.${user.id}`)
       .order('session_date', { ascending: false })
       .range(from, to);
 
@@ -38,6 +40,10 @@ export function useSessions() {
       team_session_id: s.team_sessions?.id || null,
       team_id: s.team_sessions?.team_id || null,
       team_name: s.team_sessions?.teams?.name || null,
+      owner_name: s.owner?.display_name || null,
+      owner_is_managed: s.owner?.is_managed || false,
+      // Uploaded by me for someone else — surfaced as a "managed" row in my list.
+      is_on_behalf: s.uploaded_by === user.id && s.user_id !== user.id,
     }));
 
     setSessions(prev => reset ? mapped : [...prev, ...mapped]);
@@ -61,7 +67,7 @@ export function useSessions() {
     const targetUserId = onBehalfOfUserId || user.id;
     const { data, error } = await supabase
       .from('sessions')
-      .insert({ user_id: targetUserId, ...sessionData })
+      .insert({ user_id: targetUserId, uploaded_by: user.id, ...sessionData })
       .select()
       .single();
     if (error) return { error: error.message };
@@ -75,6 +81,23 @@ export function useSessions() {
       .update({ team_session_id: teamSessionId })
       .eq('id', sessionId);
     await fetchSessions(true);
+  }, [fetchSessions]);
+
+  /**
+   * Reassign an on-behalf session to a different owner (a managed player I
+   * manage, or myself). Pass clearLink=true to also drop the team-session link
+   * (used when the new owner is in a different team, or is myself).
+   */
+  const reassignSession = useCallback(async (sessionId, newUserId, clearLink = false) => {
+    const updates = { user_id: newUserId };
+    if (clearLink) updates.team_session_id = null;
+    const { error } = await supabase
+      .from('sessions')
+      .update(updates)
+      .eq('id', sessionId);
+    if (error) return { error: error.message };
+    await fetchSessions(true);
+    return { ok: true };
   }, [fetchSessions]);
 
   const unlinkFromTeamSession = useCallback(async (sessionId) => {
@@ -113,7 +136,7 @@ export function useSessions() {
   return {
     sessions, loading, loadingMore, hasMore,
     loadMoreSessions, saveSession,
-    linkToTeamSession, unlinkFromTeamSession, deleteSession,
+    linkToTeamSession, unlinkFromTeamSession, reassignSession, deleteSession,
     updateSessionSplits, updateSessionThresholds,
     refreshSessions: fetchSessions,
   };

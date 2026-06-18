@@ -42,7 +42,9 @@ Vite + React 19 + Supabase (auth/DB/storage). Plain JS, no TypeScript. Functiona
 `id` uuid PK, `team_id`→teams, `name` text, `session_date` date, `created_by`→profiles
 
 ### `sessions`
-`id` uuid PK, `user_id`→profiles, `sport` text=`'general'`, `session_date` timestamptz, `session_type` text=`'practice'`, `duration` real, `metrics` jsonb, `thresholds` jsonb, `profile_snapshot` jsonb, `splits` jsonb?, `team_session_id`→team_sessions?, `is_verified` bool=false, `file_name` text?, `file_path` text?
+`id` uuid PK, `user_id`→profiles (owner), `uploaded_by` uuid→profiles? (who performed the upload; `DEFAULT auth.uid()`, `ON DELETE SET NULL` — `=user_id` for self-uploads, `=manager` for on-behalf/managed uploads), `sport` text=`'general'`, `session_date` timestamptz, `session_type` text=`'practice'`, `duration` real, `metrics` jsonb, `thresholds` jsonb, `profile_snapshot` jsonb, `splits` jsonb?, `team_session_id`→team_sessions?, `is_verified` bool=false, `file_name` text?, `file_path` text?
+
+On-behalf/managed session = `uploaded_by != user_id`. Surfaced in the uploader's **Individual** list (`useSessions` query is `user_id=me OR uploaded_by=me`), tagged "Managed · {owner name}", and reassignable via `reassignSession` to a managed player the uploader manages or to themselves (clears the team-session link when the new owner is in a different team or is myself). Raw files for on-behalf uploads live under the uploader's storage path. Historical real-player on-behalf rows predate this column (backfilled to `user_id`) so only show in the owner's list; managed-player history was backfilled to the ghost's `managed_by` creator.
 
 ## RLS Helpers (SECURITY DEFINER)
 - `get_my_team_ids()` — user's member teams
@@ -61,7 +63,7 @@ Vite + React 19 + Supabase (auth/DB/storage). Plain JS, no TypeScript. Functiona
 | teams | all SELECT; own INSERT; manager UPDATE/DELETE; admin verify |
 | team_members | members SELECT; self INSERT; manager UPDATE; self/manager DELETE |
 | team_sessions | members SELECT; manager INSERT/UPDATE/DELETE |
-| sessions | own CRUD; manager sees/inserts/updates linked; manager full CRUD of managed-player sessions (via `get_my_managed_player_ids()`, any `team_session_id`); admin reads all + verifies |
+| sessions | own CRUD; manager sees/inserts/updates linked; manager full CRUD of managed-player sessions (via `get_my_managed_player_ids()`, any `team_session_id`); uploader CRUD of own uploads (`uploaded_by=auth.uid()`; UPDATE check restricts reassignment target `user_id` to self or `get_my_managed_player_ids()`); admin reads all + verifies |
 
 Managed players are filtered out of public surfaces with `is_managed=false` (leaderboard/comparison RPCs — patch in DB; client `searchUsers`/`searchPlayers`/admin player list).
 
